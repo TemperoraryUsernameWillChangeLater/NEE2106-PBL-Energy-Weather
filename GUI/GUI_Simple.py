@@ -144,10 +144,39 @@ def create_plot():
     
     # Find column that matches variable
     col_name = None
-    for col in data.columns:
-        if variable in col or "temp" in col.lower() and "temp" in variable.lower():
-            col_name = col
-            break
+    
+    # Create mapping for more robust column matching
+    if variable == "Max Wind Speed":
+        # Look for maximum wind gust speed column
+        for col in data.columns:
+            if "speed of maximum wind gust" in col.lower():
+                col_name = col
+                break
+    elif variable == "Max Temperature":
+        # Look for maximum temperature column
+        for col in data.columns:
+            if "maximum temperature" in col.lower():
+                col_name = col
+                break
+    elif variable == "Min Temperature":
+        # Look for minimum temperature column
+        for col in data.columns:
+            if "minimum temperature" in col.lower():
+                col_name = col
+                break
+    elif variable == "Rainfall":
+        # Look for rainfall column
+        for col in data.columns:
+            if "rainfall" in col.lower():
+                col_name = col
+                break
+    
+    # Fallback to original matching if specific mapping didn't work
+    if col_name is None:
+        for col in data.columns:
+            if variable in col or ("temp" in col.lower() and "temperature" in variable.lower()):
+                col_name = col
+                break
     
     if col_name is None:
         return
@@ -157,8 +186,7 @@ def create_plot():
     
     # Clear previous plot
     ax.clear()
-    
-    # Create plot
+      # Create plot
     if plot_type == "Line Plot":
         ax.plot(range(len(clean_data)), clean_data, marker='o')
     elif plot_type == "Bar Chart":
@@ -170,7 +198,16 @@ def create_plot():
     
     ax.set_title(variable + " - " + plot_type)
     ax.set_xlabel("Data Points")
-    ax.set_ylabel(variable)
+    
+    # Set y-axis label with appropriate units
+    if variable == "Max Temperature" or variable == "Min Temperature":
+        ax.set_ylabel(variable + " (°C)")
+    elif variable == "Rainfall":
+        ax.set_ylabel(variable + " (mm)")
+    elif variable == "Max Wind Speed":
+        ax.set_ylabel(variable + " (km/h)")
+    else:
+        ax.set_ylabel(variable)
     
     canvas.draw()
     
@@ -184,18 +221,46 @@ def show_stats():
     if data.empty:
         stats_text.delete(1.0, tk.END)
         stats_text.insert(1.0, "No data available")
-        # Automatically switch to Statistics tab
-        notebook.select(1)
+        # Automatically switch to Statistics tab        notebook.select(1)
         return
     
     variable = variable_var.get()
     
     # Find column
     col_name = None
-    for col in data.columns:
-        if variable in col or "temp" in col.lower() and "temp" in variable.lower():
-            col_name = col
-            break
+    
+    # Create mapping for more robust column matching
+    if variable == "Max Wind Speed":
+        # Look for maximum wind gust speed column
+        for col in data.columns:
+            if "speed of maximum wind gust" in col.lower():
+                col_name = col
+                break
+    elif variable == "Max Temperature":
+        # Look for maximum temperature column
+        for col in data.columns:
+            if "maximum temperature" in col.lower():
+                col_name = col
+                break
+    elif variable == "Min Temperature":
+        # Look for minimum temperature column
+        for col in data.columns:
+            if "minimum temperature" in col.lower():
+                col_name = col
+                break
+    elif variable == "Rainfall":
+        # Look for rainfall column
+        for col in data.columns:
+            if "rainfall" in col.lower():
+                col_name = col
+                break
+    
+    # Fallback to original matching if specific mapping didn't work
+    if col_name is None:
+        for col in data.columns:
+            if variable in col or ("temp" in col.lower() and "temperature" in variable.lower()):
+                col_name = col
+                break
     
     if col_name is None:
         stats_text.delete(1.0, tk.END)
@@ -498,8 +563,8 @@ var_frame = tk.Frame(control_frame)
 var_frame.pack(fill=tk.X, padx=10, pady=5)
 
 tk.Label(var_frame, text="Variable:").grid(row=0, column=0, padx=5)
-variable_var = tk.StringVar(value="Temperature")
-var_combo = ttk.Combobox(var_frame, textvariable=variable_var, values=["Temperature", "Rainfall", "Humidity"], state="readonly")
+variable_var = tk.StringVar(value="Max Temperature")
+var_combo = ttk.Combobox(var_frame, textvariable=variable_var, values=["Max Temperature", "Min Temperature", "Rainfall", "Max Wind Speed"], state="readonly")
 var_combo.grid(row=0, column=1, padx=5)
 
 tk.Label(var_frame, text="Plot Type:").grid(row=0, column=2, padx=5)
