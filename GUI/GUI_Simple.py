@@ -11,10 +11,10 @@ import os
 
 # Simple variables to store data
 data_dict = {}
-months_list = ["24-05", "24-06", "24-07", "24-08", "24-09", "24-10", "24-11", "24-12", "25-01", "25-02", "25-03", "25-04"] # Hardcoded var names for months
+months_list = ["24-05", "24-06", "24-07", "24-08", "24-09", "24-10", "24-11", "24-12", "25-01", "25-02", "25-03", "25-04"]
 
 # Get the absolute path to the CSV files
-csv_folder = r"c:\Users\gabri\Documents\Python\(NEE2106) Computer Programming For Electrical Engineers\PBL Project - Energy and Weather\GUI" # Has to be hardcoded due 
+csv_folder = r"c:\Users\gabri\Documents\Python\(NEE2106) Computer Programming For Electrical Engineers\PBL Project - Energy and Weather\GUI"
 
 def load_csv_files():
     """Load CSV files"""
@@ -103,7 +103,8 @@ def create_plot():
     
     # Clear previous plot
     ax.clear()
-      # Create plot
+    
+    # Create plot
     if plot_type == "Line Plot":
         ax.plot(range(len(clean_data)), clean_data, marker='o')
     elif plot_type == "Bar Chart":
