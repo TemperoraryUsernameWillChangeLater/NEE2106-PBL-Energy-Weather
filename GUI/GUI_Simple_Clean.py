@@ -14,7 +14,7 @@ data_dict = {}
 months_list = ["24-05", "24-06", "24-07", "24-08", "24-09", "24-10", "24-11", "24-12", "25-01", "25-02", "25-03", "25-04"]
 
 # Get the absolute path to the CSV files
-csv_folder = r"c:\Users\gabri\Documents\Python\(NEE2106) Computer Programming For Electrical Engineers\PBL Project - Energy and Weather\GUI"
+csv_folder = r"C:\Users\gabri\Documents\Python\(NEE2106) Computer Programming For Electrical Engineers\PBL Project - Energy and Weather\Datasets"
 
 def load_csv_files():
     """Load CSV files"""
