@@ -5,7 +5,7 @@
 "This is the "official" site for Adelaide, having reopened in May 2017. Observations are available from the Kent Town site {station number 023090} up until 31 July 2020."
 "Observations were drawn from Adelaide (West Terrace / Ngayirdapira) {station 023000}"
 
-,"Date","Minimum temperature (°C)","Maximum temperature (°C)","Rainfall (mm)","Evaporation (mm)","Sunshine (hours)","Direction of maximum wind gust ","Speed of maximum wind gust (km/h)","Time of maximum wind gust","9am Temperature (°C)","9am relative humidity (%)","9am cloud amount (oktas)","9am wind direction","9am wind speed (km/h)","9am MSL pressure (hPa)","3pm Temperature (°C)","3pm relative humidity (%)","3pm cloud amount (oktas)","3pm wind direction","3pm wind speed (km/h)","3pm MSL pressure (hPa)"
+,"Date","Minimum temperature (ï¿½C)","Maximum temperature (ï¿½C)","Rainfall (mm)","Evaporation (mm)","Sunshine (hours)","Direction of maximum wind gust ","Speed of maximum wind gust (km/h)","Time of maximum wind gust","9am Temperature (ï¿½C)","9am relative humidity (%)","9am cloud amount (oktas)","9am wind direction","9am wind speed (km/h)","9am MSL pressure (hPa)","3pm Temperature (ï¿½C)","3pm relative humidity (%)","3pm cloud amount (oktas)","3pm wind direction","3pm wind speed (km/h)","3pm MSL pressure (hPa)"
 ,2024-05-1,7.6,19.2,0,,,SE,26,10:44,11.9,78,,SE,7,1033.4,18.4,44,,SE,13,1028.9
 ,2024-05-2,9.3,21.0,0,,,ESE,39,06:52,15.1,61,,ESE,19,1030.5,20.7,43,,ESE,13,1027.5
 ,2024-05-3,8.2,21.7,0,,,SW,30,15:23,16.9,60,,ESE,2,1028.2,20.8,40,,WSW,15,1024.6
