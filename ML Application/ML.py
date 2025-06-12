@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import os
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
@@ -527,9 +528,8 @@ def main():
     
     # Initialize model
     forecaster = EnergyForecastingModel()
-    
-    # Load data
-    data_path = r"C:\Users\gabri\Documents\Python\(NEE2106) Computer Programming For Electrical Engineers\Session 5\Integrated Energy Management and Forecasting Dataset.csv"
+      # Load data
+    data_path = os.path.join(os.path.dirname(__file__), "..", "..", "Session 5", "Integrated Energy Management and Forecasting Dataset.csv")
     
     if not forecaster.load_and_prepare_data(data_path):
         print("❌ Failed to load data. Exiting...")
