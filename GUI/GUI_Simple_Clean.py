@@ -117,22 +117,35 @@ def create_plot_visualization(clean_data, plot_type, variable): # Create matplot
         ax.scatter(range(len(clean_data)), clean_data)
     
     ax.set_title(variable + " - " + plot_type)
-    ax.set_xlabel("Data Points")
     
-    # Set y-axis label with units
-    if variable == "Max Temperature" or variable == "Min Temperature":
-        ax.set_ylabel(variable + " (°C)")
-    elif variable == "Rainfall":
-        ax.set_ylabel(variable + " (mm)")
-    elif variable == "Max Wind Speed":
-        ax.set_ylabel(variable + " (km/h)")
+    # Set labels based on plot type
+    if plot_type == "Histogram":
+        # For histograms, x-axis shows the variable values, y-axis shows frequency
+        if variable == "Max Temperature" or variable == "Min Temperature":
+            ax.set_xlabel(variable + " (°C)")
+        elif variable == "Rainfall":
+            ax.set_xlabel(variable + " (mm)")
+        elif variable == "Max Wind Speed":
+            ax.set_xlabel(variable + " (km/h)")
+        else:
+            ax.set_xlabel(variable)
+        ax.set_ylabel("Frequency")
     else:
-        ax.set_ylabel(variable)
+        # For other plot types, x-axis shows data points, y-axis shows the variable
+        ax.set_xlabel("Data Points")
+        if variable == "Max Temperature" or variable == "Min Temperature":
+            ax.set_ylabel(variable + " (°C)")
+        elif variable == "Rainfall":
+            ax.set_ylabel(variable + " (mm)")
+        elif variable == "Max Wind Speed":
+            ax.set_ylabel(variable + " (km/h)")
+        else:
+            ax.set_ylabel(variable)
     
     canvas.draw()
     notebook.select(0)
 
-def create_plot(): # Main function to create and display plots based on user selections
+def create_plot(): # (BUTTON) Main function to create and display plots based on user selections
     """Create plot based on selections"""
     data = get_selected_data()
     
@@ -177,7 +190,7 @@ def display_stats(stats_info): # Display formatted statistics in the GUI text wi
     stats_text.insert(1.0, stats_info)
     notebook.select(1)
 
-def show_stats(): # Calculate and display statistical summary for selected variable and data range
+def show_stats(): #(BUTTON) Calculate and display statistical summary for selected variable and data range
     """Show basic statistics"""
     data = get_selected_data()
     
