@@ -159,9 +159,15 @@ def generate_stats_text(clean_data, variable): # Generate formatted statistics t
     stats_info = stats_info + "="*30 + "\n\n"
     stats_info = stats_info + "Count: " + str(len(clean_data)) + "\n"
     stats_info = stats_info + "Mean: " + str(round(clean_data.mean(), 2)) + "\n"
-    stats_info = stats_info + "Median: " + str(round(clean_data.median(), 2)) + "\n"
-    stats_info = stats_info + "Standard Deviation: " + str(round(clean_data.std(), 2)) + "\n"
+    stats_info = stats_info + "Standard Deviation: " + str(round(clean_data.std(), 2)) + "\n\n"
+    
+    # 5-Number Summary
+    stats_info = stats_info + "5-NUMBER SUMMARY:\n"
+    stats_info = stats_info + "-" * 20 + "\n"
     stats_info = stats_info + "Minimum: " + str(round(clean_data.min(), 2)) + "\n"
+    stats_info = stats_info + "Q1 (25th percentile): " + str(round(clean_data.quantile(0.25), 2)) + "\n"
+    stats_info = stats_info + "Median (Q2): " + str(round(clean_data.median(), 2)) + "\n"
+    stats_info = stats_info + "Q3 (75th percentile): " + str(round(clean_data.quantile(0.75), 2)) + "\n"
     stats_info = stats_info + "Maximum: " + str(round(clean_data.max(), 2)) + "\n"
     return stats_info
 
