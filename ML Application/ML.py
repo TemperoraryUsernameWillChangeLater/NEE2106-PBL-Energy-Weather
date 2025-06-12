@@ -1,576 +1,231 @@
-# PBL Project Part 2: Machine Learning Implementation
-# Predictive Modelling of Household Energy Consumption Based on Weather Pattern
+# ML Application: Energy Demand and Supply Prediction using RNN
+# Based on PBL Project - Energy and Weather Part 2
+# Predicts Energy Demand and Supply using Temperature and Weather Condition
 
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
-import os
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler, LabelEncoder
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense, Dropout
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.callbacks import EarlyStopping
-import warnings
-warnings.filterwarnings('ignore')
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+import seaborn as sns
 
-# Set style for better plots
-plt.style.use('seaborn-v0_8-whitegrid')
-sns.set_palette("husl")
+# Load dataset
+csv_path = r"c:\Users\gabri\Documents\Python\(NEE2106) Computer Programming For Electrical Engineers\PBL Project - Energy and Weather\ML Application\Integrated Energy Management and Forecasting Dataset.csv"
+data = pd.read_csv(csv_path)
 
-class EnergyForecastingModel:
-    """
-    Comprehensive Energy Forecasting Model using RNN/LSTM
-    Implements single-factor, two-factor, and multi-factor analysis
-    """
-    
-    def __init__(self, data_path=None):
-        """Initialize the forecasting model"""
-        self.data_path = data_path
-        self.data = None
-        self.models = {}
-        self.results = []
-        self.scalers = {}
-        
-    def load_and_prepare_data(self, data_path=None):
-        """Load and prepare the energy dataset"""
-        if data_path:
-            self.data_path = data_path
-            
-        print("🔄 Loading Energy Dataset...")
-        
-        # Load the integrated energy dataset
-        try:
-            self.data = pd.read_csv(self.data_path)
-            print(f"✅ Data loaded successfully: {self.data.shape[0]} records, {self.data.shape[1]} features")
-        except Exception as e:
-            print(f"❌ Error loading data: {e}")
-            return False
-            
-        # Display basic info
-        print("\n📊 Dataset Overview:")
-        print(self.data.head())
-        print(f"\nColumns: {list(self.data.columns)}")
-        print(f"\nData types:\n{self.data.dtypes}")
-        print(f"\nMissing values:\n{self.data.isnull().sum()}")
-        
-        # Data preprocessing
-        print("\n🔧 Preprocessing data...")
-        self.preprocess_data()
-        
-        return True
-    
-    def preprocess_data(self):
-        """Preprocess the data for ML model training"""
-        # Convert timestamp to datetime
-        self.data['Timestamp'] = pd.to_datetime(self.data['Timestamp'])
-        
-        # Create time-based features
-        self.data['Hour'] = self.data['Timestamp'].dt.hour
-        self.data['DayOfWeek'] = self.data['Timestamp'].dt.dayofweek
-        self.data['Month'] = self.data['Timestamp'].dt.month
-        
-        # Handle weather conditions (encode categorical data)
-        le_weather_x = LabelEncoder()
-        le_weather_y = LabelEncoder()
-        
-        self.data['Weather_Condition_x_encoded'] = le_weather_x.fit_transform(self.data['Weather_Condition_x'].fillna('Unknown'))
-        self.data['Weather_Condition_y_encoded'] = le_weather_y.fit_transform(self.data['Weather_Condition_y'].fillna('Unknown'))
-        
-        # Fill missing values
-        numeric_columns = self.data.select_dtypes(include=[np.number]).columns
-        self.data[numeric_columns] = self.data[numeric_columns].fillna(self.data[numeric_columns].mean())
-        
-        # Remove any remaining rows with missing target variable
-        self.data = self.data.dropna(subset=['Energy_Demand'])
-        
-        print(f"✅ Data preprocessed: {self.data.shape[0]} records ready for modeling")
-    
-    def create_sequences(self, data, target_col, feature_cols, sequence_length=24):
-        """Create sequences for LSTM training"""
-        X, y = [], []
-        
-        for i in range(len(data) - sequence_length):
-            # Features sequence
-            X.append(data[feature_cols].iloc[i:(i + sequence_length)].values)
-            # Target (next value)
-            y.append(data[target_col].iloc[i + sequence_length])
-            
-        return np.array(X), np.array(y)
-    
-    def build_rnn_model(self, input_shape, model_name="Basic"):
-        """Build RNN/LSTM model architecture"""
-        model = Sequential([
-            LSTM(50, return_sequences=True, input_shape=input_shape),
-            Dropout(0.2),
-            LSTM(50, return_sequences=False),
-            Dropout(0.2),
-            Dense(25),
-            Dense(1)
-        ])
-        
-        model.compile(
-            optimizer=Adam(learning_rate=0.001),
-            loss='mse',
-            metrics=['mae']
-        )
-        
-        return model
-    
-    def train_single_factor_model(self, factor='Temperature'):
-        """Train RNN model with single weather factor"""
-        print(f"\n🤖 Training Single Factor Model: {factor}")
-        
-        # Prepare features
-        feature_cols = [factor, 'Hour', 'DayOfWeek', 'Month']
-        target_col = 'Energy_Demand'
-        
-        # Create sequences
-        X, y = self.create_sequences(self.data, target_col, feature_cols)
-        
-        # Split data
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, random_state=42, shuffle=False
-        )
-        
-        # Scale features
-        scaler = StandardScaler()
-        X_train_scaled = self._scale_sequences(X_train, scaler, fit=True)
-        X_test_scaled = self._scale_sequences(X_test, scaler, fit=False)
-        
-        # Scale target
-        target_scaler = StandardScaler()
-        y_train_scaled = target_scaler.fit_transform(y_train.reshape(-1, 1)).flatten()
-        
-        # Build and train model
-        model = self.build_rnn_model(X_train_scaled.shape[1:], f"Single_{factor}")
-        
-        early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
-        
-        history = model.fit(
-            X_train_scaled, y_train_scaled,
-            epochs=50,
-            batch_size=32,
-            validation_split=0.2,
-            callbacks=[early_stopping],
-            verbose=1
-        )
-        
-        # Make predictions
-        y_pred_scaled = model.predict(X_test_scaled)
-        y_pred = target_scaler.inverse_transform(y_pred_scaled.reshape(-1, 1)).flatten()
-        
-        # Calculate metrics
-        mae = mean_absolute_error(y_test, y_pred)
-        rmse = np.sqrt(mean_squared_error(y_test, y_pred))
-        r2 = r2_score(y_test, y_pred)
-        
-        # Store results
-        result = {
-            'Model': f'Single Factor - {factor}',
-            'Factors': [factor],
-            'MAE': mae,
-            'RMSE': rmse,
-            'R²': r2,
-            'Training_History': history,
-            'Predictions': y_pred,
-            'Actual': y_test
-        }
-        
-        self.results.append(result)
-        self.models[f'single_{factor.lower()}'] = model
-        self.scalers[f'single_{factor.lower()}'] = (scaler, target_scaler)
-        
-        print(f"✅ Single Factor Model ({factor}) trained successfully!")
-        print(f"   MAE: {mae:.2f}, RMSE: {rmse:.2f}, R²: {r2:.3f}")
-        
-        return result
-    
-    def train_two_factor_model(self, factor1='Temperature', factor2='Weather_Condition_x_encoded'):
-        """Train RNN model with two weather factors"""
-        print(f"\n🤖 Training Two Factor Model: {factor1} + {factor2}")
-        
-        # Prepare features
-        feature_cols = [factor1, factor2, 'Hour', 'DayOfWeek', 'Month']
-        target_col = 'Energy_Demand'
-        
-        # Create sequences
-        X, y = self.create_sequences(self.data, target_col, feature_cols)
-        
-        # Split data
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, random_state=42, shuffle=False
-        )
-        
-        # Scale features
-        scaler = StandardScaler()
-        X_train_scaled = self._scale_sequences(X_train, scaler, fit=True)
-        X_test_scaled = self._scale_sequences(X_test, scaler, fit=False)
-        
-        # Scale target
-        target_scaler = StandardScaler()
-        y_train_scaled = target_scaler.fit_transform(y_train.reshape(-1, 1)).flatten()
-        
-        # Build and train model
-        model = self.build_rnn_model(X_train_scaled.shape[1:], f"Two_{factor1}_{factor2}")
-        
-        early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
-        
-        history = model.fit(
-            X_train_scaled, y_train_scaled,
-            epochs=50,
-            batch_size=32,
-            validation_split=0.2,
-            callbacks=[early_stopping],
-            verbose=1
-        )
-        
-        # Make predictions
-        y_pred_scaled = model.predict(X_test_scaled)
-        y_pred = target_scaler.inverse_transform(y_pred_scaled.reshape(-1, 1)).flatten()
-        
-        # Calculate metrics
-        mae = mean_absolute_error(y_test, y_pred)
-        rmse = np.sqrt(mean_squared_error(y_test, y_pred))
-        r2 = r2_score(y_test, y_pred)
-        
-        # Store results
-        result = {
-            'Model': f'Two Factor - {factor1} + {factor2}',
-            'Factors': [factor1, factor2],
-            'MAE': mae,
-            'RMSE': rmse,
-            'R²': r2,
-            'Training_History': history,
-            'Predictions': y_pred,
-            'Actual': y_test
-        }
-        
-        self.results.append(result)
-        self.models[f'two_{factor1.lower()}_{factor2.lower()}'] = model
-        self.scalers[f'two_{factor1.lower()}_{factor2.lower()}'] = (scaler, target_scaler)
-        
-        print(f"✅ Two Factor Model ({factor1} + {factor2}) trained successfully!")
-        print(f"   MAE: {mae:.2f}, RMSE: {rmse:.2f}, R²: {r2:.3f}")
-        
-        return result
-    
-    def train_multi_factor_model(self):
-        """Train RNN model with multiple factors"""
-        print(f"\n🤖 Training Multi-Factor Model (All available features)")
-        
-        # Prepare features - use all relevant numerical features
-        feature_cols = [
-            'Temperature', 'Weather_Condition_x_encoded', 'Weather_Condition_y_encoded',
-            'Energy_Supply', 'Grid_Load', 'Renewable_Source_Output', 
-            'NonRenewable_Source_Output', 'Energy_Price',
-            'Hour', 'DayOfWeek', 'Month'
-        ]
-        target_col = 'Energy_Demand'
-        
-        # Create sequences
-        X, y = self.create_sequences(self.data, target_col, feature_cols)
-        
-        # Split data
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, random_state=42, shuffle=False
-        )
-        
-        # Scale features
-        scaler = StandardScaler()
-        X_train_scaled = self._scale_sequences(X_train, scaler, fit=True)
-        X_test_scaled = self._scale_sequences(X_test, scaler, fit=False)
-        
-        # Scale target
-        target_scaler = StandardScaler()
-        y_train_scaled = target_scaler.fit_transform(y_train.reshape(-1, 1)).flatten()
-        
-        # Build and train model (larger architecture for multi-factor)
-        model = Sequential([
-            LSTM(100, return_sequences=True, input_shape=X_train_scaled.shape[1:]),
-            Dropout(0.3),
-            LSTM(50, return_sequences=True),
-            Dropout(0.3),
-            LSTM(25, return_sequences=False),
-            Dropout(0.2),
-            Dense(50),
-            Dense(25),
-            Dense(1)
-        ])
-        
-        model.compile(
-            optimizer=Adam(learning_rate=0.001),
-            loss='mse',
-            metrics=['mae']
-        )
-        
-        early_stopping = EarlyStopping(monitor='val_loss', patience=15, restore_best_weights=True)
-        
-        history = model.fit(
-            X_train_scaled, y_train_scaled,
-            epochs=100,
-            batch_size=32,
-            validation_split=0.2,
-            callbacks=[early_stopping],
-            verbose=1
-        )
-        
-        # Make predictions
-        y_pred_scaled = model.predict(X_test_scaled)
-        y_pred = target_scaler.inverse_transform(y_pred_scaled.reshape(-1, 1)).flatten()
-        
-        # Calculate metrics
-        mae = mean_absolute_error(y_test, y_pred)
-        rmse = np.sqrt(mean_squared_error(y_test, y_pred))
-        r2 = r2_score(y_test, y_pred)
-        
-        # Store results
-        result = {
-            'Model': 'Multi-Factor (All Features)',
-            'Factors': feature_cols,
-            'MAE': mae,
-            'RMSE': rmse,
-            'R²': r2,
-            'Training_History': history,
-            'Predictions': y_pred,
-            'Actual': y_test
-        }
-        
-        self.results.append(result)
-        self.models['multi_factor'] = model
-        self.scalers['multi_factor'] = (scaler, target_scaler)
-        
-        print(f"✅ Multi-Factor Model trained successfully!")
-        print(f"   MAE: {mae:.2f}, RMSE: {rmse:.2f}, R²: {r2:.3f}")
-        
-        return result
-    
-    def _scale_sequences(self, sequences, scaler, fit=False):
-        """Helper function to scale sequence data"""
-        # Reshape for scaling
-        n_samples, n_timesteps, n_features = sequences.shape
-        sequences_reshaped = sequences.reshape(-1, n_features)
-        
-        # Scale
-        if fit:
-            sequences_scaled = scaler.fit_transform(sequences_reshaped)
-        else:
-            sequences_scaled = scaler.transform(sequences_reshaped)
-        
-        # Reshape back
-        return sequences_scaled.reshape(n_samples, n_timesteps, n_features)
-    
-    def create_performance_summary(self):
-        """Create comprehensive performance summary table"""
-        print("\n📊 MODEL PERFORMANCE SUMMARY")
-        print("=" * 80)
-        
-        # Create DataFrame with results
-        summary_data = []
-        for result in self.results:
-            summary_data.append({
-                'Model': result['Model'],
-                'Factors Count': len(result['Factors']),
-                'Primary Factors': ', '.join(result['Factors'][:2]) if len(result['Factors']) > 2 else ', '.join(result['Factors']),
-                'MAE': round(result['MAE'], 2),
-                'RMSE': round(result['RMSE'], 2),
-                'R²': round(result['R²'], 3)
-            })
-        
-        self.performance_df = pd.DataFrame(summary_data)
-        self.performance_df = self.performance_df.sort_values('R²', ascending=False)
-        
-        print(self.performance_df.to_string(index=False))
-        
-        # Find best model
-        best_model = self.performance_df.iloc[0]
-        print(f"\n🏆 BEST PERFORMING MODEL:")
-        print(f"   Model: {best_model['Model']}")
-        print(f"   R² Score: {best_model['R²']}")
-        print(f"   RMSE: {best_model['RMSE']}")
-        print(f"   MAE: {best_model['MAE']}")
-        
-        return self.performance_df
-    
-    def visualize_results(self):
-        """Create comprehensive visualizations of model performance"""
-        print("\n📈 Creating visualizations...")
-        
-        # Set up the plotting
-        fig = plt.figure(figsize=(20, 15))
-        
-        # 1. Model Performance Comparison
-        plt.subplot(3, 3, 1)
-        models = [result['Model'] for result in self.results]
-        r2_scores = [result['R²'] for result in self.results]
-        
-        bars = plt.bar(range(len(models)), r2_scores, color=['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4'])
-        plt.xlabel('Model')
-        plt.ylabel('R² Score')
-        plt.title('Model Performance Comparison (R² Score)')
-        plt.xticks(range(len(models)), [m.split(' - ')[0] for m in models], rotation=45)
-        
-        # Add value labels on bars
-        for bar, score in zip(bars, r2_scores):
-            plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01, 
-                    f'{score:.3f}', ha='center', va='bottom')
-        
-        # 2. MAE Comparison
-        plt.subplot(3, 3, 2)
-        mae_scores = [result['MAE'] for result in self.results]
-        plt.bar(range(len(models)), mae_scores, color=['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4'])
-        plt.xlabel('Model')
-        plt.ylabel('MAE')
-        plt.title('Mean Absolute Error Comparison')
-        plt.xticks(range(len(models)), [m.split(' - ')[0] for m in models], rotation=45)
-        
-        # 3. RMSE Comparison
-        plt.subplot(3, 3, 3)
-        rmse_scores = [result['RMSE'] for result in self.results]
-        plt.bar(range(len(models)), rmse_scores, color=['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4'])
-        plt.xlabel('Model')
-        plt.ylabel('RMSE')
-        plt.title('Root Mean Square Error Comparison')
-        plt.xticks(range(len(models)), [m.split(' - ')[0] for m in models], rotation=45)
-        
-        # 4-6. Prediction vs Actual for each model
-        for i, result in enumerate(self.results[:3]):  # Show first 3 models
-            plt.subplot(3, 3, 4 + i)
-            actual = result['Actual'][:100]  # Show first 100 predictions
-            predicted = result['Predictions'][:100]
-            
-            plt.plot(actual, label='Actual', alpha=0.7, linewidth=2)
-            plt.plot(predicted, label='Predicted', alpha=0.7, linewidth=2)
-            plt.xlabel('Time Steps')
-            plt.ylabel('Energy Demand')
-            plt.title(f'{result["Model"]}\nPrediction vs Actual')
-            plt.legend()
-            plt.grid(True, alpha=0.3)
-        
-        # 7. Training History for best model
-        if self.results:
-            best_result = max(self.results, key=lambda x: x['R²'])
-            plt.subplot(3, 3, 7)
-            history = best_result['Training_History']
-            plt.plot(history.history['loss'], label='Training Loss')
-            plt.plot(history.history['val_loss'], label='Validation Loss')
-            plt.xlabel('Epoch')
-            plt.ylabel('Loss')
-            plt.title(f'Training History - {best_result["Model"]}')
-            plt.legend()
-            plt.grid(True, alpha=0.3)
-        
-        # 8. Residual Analysis for best model
-        if self.results:
-            plt.subplot(3, 3, 8)
-            best_result = max(self.results, key=lambda x: x['R²'])
-            residuals = best_result['Actual'] - best_result['Predictions']
-            plt.scatter(best_result['Predictions'], residuals, alpha=0.6, s=20)
-            plt.axhline(y=0, color='red', linestyle='--')
-            plt.xlabel('Predicted Values')
-            plt.ylabel('Residuals')
-            plt.title(f'Residual Plot - {best_result["Model"]}')
-            plt.grid(True, alpha=0.3)
-        
-        # 9. Feature Importance (correlation with target)
-        plt.subplot(3, 3, 9)
-        correlations = self.data[['Temperature', 'Energy_Supply', 'Grid_Load', 
-                                 'Renewable_Source_Output', 'Energy_Price']].corrwith(self.data['Energy_Demand'])
-        correlations.abs().sort_values(ascending=True).plot(kind='barh', color='skyblue')
-        plt.xlabel('Absolute Correlation with Energy Demand')
-        plt.title('Feature Importance (Correlation)')
-        plt.grid(True, alpha=0.3)
-        
-        plt.tight_layout()
-        plt.savefig('energy_forecasting_results.png', dpi=300, bbox_inches='tight')
-        plt.show()
-        
-        print("✅ Visualizations created and saved as 'energy_forecasting_results.png'")
-    
-    def generate_insights_and_recommendations(self):
-        """Generate insights and optimization recommendations"""
-        print("\n💡 INSIGHTS AND RECOMMENDATIONS")
-        print("=" * 80)
-        
-        # Analyze feature correlations
-        correlations = self.data[['Temperature', 'Energy_Supply', 'Grid_Load', 
-                                 'Renewable_Source_Output', 'Energy_Price']].corrwith(self.data['Energy_Demand'])
-        
-        print("🔍 KEY INSIGHTS:")
-        print(f"1. Strongest correlation with energy demand: {correlations.abs().idxmax()} ({correlations.abs().max():.3f})")
-        print(f"2. Best performing model: {max(self.results, key=lambda x: x['R²'])['Model']}")
-        print(f"3. Average energy demand: {self.data['Energy_Demand'].mean():.2f} units")
-        print(f"4. Peak energy demand: {self.data['Energy_Demand'].max():.2f} units")
-        
-        # Time-based patterns
-        hourly_avg = self.data.groupby('Hour')['Energy_Demand'].mean()
-        peak_hour = hourly_avg.idxmax()
-        low_hour = hourly_avg.idxmin()
-        
-        print(f"5. Peak demand hour: {peak_hour}:00 ({hourly_avg[peak_hour]:.2f} units)")
-        print(f"6. Lowest demand hour: {low_hour}:00 ({hourly_avg[low_hour]:.2f} units)")
-        
-        print("\n⚡ OPTIMIZATION RECOMMENDATIONS:")
-        print("1. 🌡️  Temperature Management: Monitor temperature forecasts for demand planning")
-        print("2. 🔋 Energy Storage: Store excess renewable energy during low demand hours")
-        print(f"3. ⏰ Load Scheduling: Schedule non-critical loads outside peak hour ({peak_hour}:00)")
-        print("4. 📊 Real-time Monitoring: Implement the multi-factor model for continuous forecasting")
-        print("5. 🌿 Renewable Integration: Increase renewable sources during predicted high demand")
-        
-        return correlations
+print("Dataset Info:")
+print(f"Shape: {data.shape}")
+print(f"Columns: {data.columns.tolist()}")
+print("\nFirst few rows:")
+print(data.head())
 
-def main():
-    """Main execution function"""
-    print("🚀 ENERGY FORECASTING ML APPLICATION")
-    print("=" * 50)
-    
-    # Initialize model
-    forecaster = EnergyForecastingModel()
-      # Load data
-    data_path = os.path.join(os.path.dirname(__file__), "..", "..", "Session 5", "Integrated Energy Management and Forecasting Dataset.csv")
-    
-    if not forecaster.load_and_prepare_data(data_path):
-        print("❌ Failed to load data. Exiting...")
-        return
-    
-    # Train models
-    print("\n🎯 TRAINING PHASE - Multiple Model Analysis")
-    print("-" * 50)
-    
-    # 1. Single Factor Analysis - Temperature
-    forecaster.train_single_factor_model('Temperature')
-    
-    # 2. Single Factor Analysis - Weather Condition
-    forecaster.train_single_factor_model('Weather_Condition_x_encoded')
-    
-    # 3. Two Factor Analysis - Temperature + Weather
-    forecaster.train_two_factor_model('Temperature', 'Weather_Condition_x_encoded')
-    
-    # 4. Multi-Factor Analysis
-    forecaster.train_multi_factor_model()
-    
-    # Performance Analysis
-    print("\n📈 ANALYSIS PHASE")
-    print("-" * 50)
-    
-    # Create performance summary
-    performance_df = forecaster.create_performance_summary()
-    
-    # Generate visualizations
-    forecaster.visualize_results()
-    
-    # Generate insights and recommendations
-    forecaster.generate_insights_and_recommendations()
-    
-    # Save performance summary
-    performance_df.to_csv('model_performance_summary.csv', index=False)
-    print(f"\n💾 Performance summary saved as 'model_performance_summary.csv'")
-    
-    print("\n✅ ANALYSIS COMPLETE!")
-    print("📊 Check 'energy_forecasting_results.png' for visualizations")
-    print("📋 Check 'model_performance_summary.csv' for detailed metrics")
+# Data preprocessing
+# Use Weather_Condition_x as the primary weather condition
+data_clean = data.dropna()
 
-if __name__ == "__main__":
-    main()
+# Encode weather conditions
+le = LabelEncoder()
+data_clean['Weather_Encoded'] = le.fit_transform(data_clean['Weather_Condition_x'])
+
+print(f"\nWeather conditions mapping:")
+for i, condition in enumerate(le.classes_):
+    print(f"{condition}: {i}")
+
+# Prepare features and targets
+features = ['Temperature', 'Weather_Encoded']
+targets = ['Energy_Demand', 'Energy_Supply']
+
+X = data_clean[features].values
+y = data_clean[targets].values
+
+# Scale features
+scaler_X = StandardScaler()
+scaler_y = StandardScaler()
+
+X_scaled = scaler_X.fit_transform(X)
+y_scaled = scaler_y.fit_transform(y)
+
+# Split data
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y_scaled, test_size=0.2, random_state=42)
+
+# Reshape for RNN (samples, timesteps, features)
+# For this case, we'll use timesteps=1 since we don't have sequential data
+X_train_rnn = X_train.reshape((X_train.shape[0], 1, X_train.shape[1]))
+X_test_rnn = X_test.reshape((X_test.shape[0], 1, X_test.shape[1]))
+
+print(f"\nData shapes:")
+print(f"X_train_rnn: {X_train_rnn.shape}")
+print(f"X_test_rnn: {X_test_rnn.shape}")
+print(f"y_train: {y_train.shape}")
+print(f"y_test: {y_test.shape}")
+
+# Build RNN Model
+def create_rnn_model(input_shape, output_dim):
+    model = keras.Sequential([
+        layers.SimpleRNN(64, activation='relu', input_shape=input_shape, return_sequences=True),
+        layers.Dropout(0.2),
+        layers.SimpleRNN(32, activation='relu'),
+        layers.Dropout(0.2),
+        layers.Dense(16, activation='relu'),
+        layers.Dense(output_dim)
+    ])
+    
+    model.compile(optimizer='adam', loss='mse', metrics=['mae'])
+    return model
+
+# Create and train the model
+model = create_rnn_model((1, 2), 2)  # (timesteps, features), output_dim
+print("\nModel Architecture:")
+model.summary()
+
+# Train model
+print("\nTraining RNN model...")
+history = model.fit(
+    X_train_rnn, y_train,
+    epochs=100,
+    batch_size=32,
+    validation_split=0.2,
+    verbose=1
+)
+
+# Make predictions
+y_pred_scaled = model.predict(X_test_rnn)
+
+# Inverse transform predictions and actual values
+y_pred = scaler_y.inverse_transform(y_pred_scaled)
+y_test_actual = scaler_y.inverse_transform(y_test)
+
+# Calculate performance metrics
+mse = mean_squared_error(y_test_actual, y_pred)
+rmse = np.sqrt(mse)
+mae = mean_absolute_error(y_test_actual, y_pred)
+r2 = r2_score(y_test_actual, y_pred)
+
+print(f"\n=== RNN Model Performance (Two Factors: Temperature + Weather) ===")
+print(f"MSE: {mse:.2f}")
+print(f"RMSE: {rmse:.2f}")
+print(f"MAE: {mae:.2f}")
+print(f"R² Score: {r2:.4f}")
+
+# Individual metrics for Energy Demand and Supply
+demand_mse = mean_squared_error(y_test_actual[:, 0], y_pred[:, 0])
+supply_mse = mean_squared_error(y_test_actual[:, 1], y_pred[:, 1])
+demand_r2 = r2_score(y_test_actual[:, 0], y_pred[:, 0])
+supply_r2 = r2_score(y_test_actual[:, 1], y_pred[:, 1])
+
+print(f"\nEnergy Demand - MSE: {demand_mse:.2f}, R²: {demand_r2:.4f}")
+print(f"Energy Supply - MSE: {supply_mse:.2f}, R²: {supply_r2:.4f}")
+
+# Visualizations
+plt.figure(figsize=(15, 10))
+
+# Training history
+plt.subplot(2, 3, 1)
+plt.plot(history.history['loss'], label='Training Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
+plt.title('Model Training History')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.legend()
+
+# Energy Demand Predictions
+plt.subplot(2, 3, 2)
+X_test_original = scaler_X.inverse_transform(X_test)
+plt.scatter(X_test_original[:, 0], y_test_actual[:, 0], color='blue', label='Actual Demand', alpha=0.6)
+sorted_indices = np.argsort(X_test_original[:, 0])
+plt.plot(X_test_original[sorted_indices, 0], y_pred[sorted_indices, 0], color='red', label='Predicted Demand', linewidth=2)
+plt.xlabel('Temperature (°C)')
+plt.ylabel('Energy Demand')
+plt.title('Energy Demand Prediction')
+plt.legend()
+
+# Energy Supply Predictions
+plt.subplot(2, 3, 3)
+plt.scatter(X_test_original[:, 0], y_test_actual[:, 1], color='green', label='Actual Supply', alpha=0.6)
+plt.plot(X_test_original[sorted_indices, 0], y_pred[sorted_indices, 1], color='orange', label='Predicted Supply', linewidth=2)
+plt.xlabel('Temperature (°C)')
+plt.ylabel('Energy Supply')
+plt.title('Energy Supply Prediction')
+plt.legend()
+
+# Actual vs Predicted for Energy Demand
+plt.subplot(2, 3, 4)
+plt.scatter(y_test_actual[:, 0], y_pred[:, 0], alpha=0.6)
+plt.plot([y_test_actual[:, 0].min(), y_test_actual[:, 0].max()], 
+         [y_test_actual[:, 0].min(), y_test_actual[:, 0].max()], 'r--', lw=2)
+plt.xlabel('Actual Energy Demand')
+plt.ylabel('Predicted Energy Demand')
+plt.title('Actual vs Predicted: Energy Demand')
+
+# Actual vs Predicted for Energy Supply
+plt.subplot(2, 3, 5)
+plt.scatter(y_test_actual[:, 1], y_pred[:, 1], alpha=0.6)
+plt.plot([y_test_actual[:, 1].min(), y_test_actual[:, 1].max()], 
+         [y_test_actual[:, 1].min(), y_test_actual[:, 1].max()], 'r--', lw=2)
+plt.xlabel('Actual Energy Supply')
+plt.ylabel('Predicted Energy Supply')
+plt.title('Actual vs Predicted: Energy Supply')
+
+# Weather condition effect
+plt.subplot(2, 3, 6)
+weather_conditions = le.classes_
+demand_by_weather = []
+supply_by_weather = []
+
+for i, condition in enumerate(weather_conditions):
+    mask = X_test_original[:, 1] == i
+    if np.any(mask):
+        demand_by_weather.append(np.mean(y_test_actual[mask, 0]))
+        supply_by_weather.append(np.mean(y_test_actual[mask, 1]))
+    else:
+        demand_by_weather.append(0)
+        supply_by_weather.append(0)
+
+x_pos = np.arange(len(weather_conditions))
+width = 0.35
+
+plt.bar(x_pos - width/2, demand_by_weather, width, label='Energy Demand', alpha=0.8)
+plt.bar(x_pos + width/2, supply_by_weather, width, label='Energy Supply', alpha=0.8)
+plt.xlabel('Weather Condition')
+plt.ylabel('Average Energy')
+plt.title('Energy by Weather Condition')
+plt.xticks(x_pos, weather_conditions, rotation=45)
+plt.legend()
+
+plt.tight_layout()
+plt.show()
+
+# Save model performance summary
+performance_summary = pd.DataFrame({
+    'Model': ['RNN (Temperature + Weather)'],
+    'Features': ['Temperature, Weather_Condition'],
+    'MSE': [mse],
+    'RMSE': [rmse],
+    'MAE': [mae],
+    'R2_Score': [r2],
+    'Demand_MSE': [demand_mse],
+    'Supply_MSE': [supply_mse],
+    'Demand_R2': [demand_r2],
+    'Supply_R2': [supply_r2]
+})
+
+print("\n=== Model Performance Summary ===")
+print(performance_summary)
+
+# Save to CSV
+performance_summary.to_csv(r'c:\Users\gabri\Documents\Python\(NEE2106) Computer Programming For Electrical Engineers\model_performance_summary.csv', index=False)
+print(f"\nPerformance summary saved to model_performance_summary.csv")
+
+# Feature importance analysis
+print(f"\n=== Feature Analysis ===")
+print(f"Temperature range: {data_clean['Temperature'].min():.1f}°C to {data_clean['Temperature'].max():.1f}°C")
+print(f"Weather conditions: {', '.join(le.classes_)}")
+
+# Correlation analysis
+correlation_matrix = data_clean[['Temperature', 'Weather_Encoded', 'Energy_Demand', 'Energy_Supply']].corr()
+print(f"\nCorrelation Matrix:")
+print(correlation_matrix)
