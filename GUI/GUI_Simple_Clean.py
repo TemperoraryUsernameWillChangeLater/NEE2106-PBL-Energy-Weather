@@ -49,112 +49,27 @@ def get_selected_data():
                     all_data = pd.concat([all_data, data_dict[month]], ignore_index=True)
         return all_data
 
-def create_plot():
-    """Create plot based on selections"""
-    data = get_selected_data() # Nested function dependant on return value of get_selected_data() ⬆️
+def combine_temperature_columns(data, temp_type):
+    """Helper function to combine temperature columns"""
+    matching_cols = []
+    search_term = f"{temp_type.lower()} temperature"
     
-    if data.empty:
-        messagebox.showwarning("No Data", "No data available for the selected month or variable.")
-        return
+    for col in data.columns:
+        if search_term in normalize_column_name(col):
+            matching_cols.append(col)
     
-    variable = variable_var.get() # Gets variable selected in GUI ie, temp, rain, wind
-    plot_type = plot_var.get() # Gets plot type selected in GUI ie, line, bar, hist, scatter
-    col_name = None # Initialize column name to None
-    
-    # Checks variable selected, finds corresponding column name; setting col_name to first matching column
-    if variable == "Max Wind Speed":
-        for col in data.columns:
-            if "speed of maximum wind gust" in col.lower(): 
-                col_name = col
-                break
-    elif variable == "Max Temperature":
-        # Combine all max temperature columns
-        matching_cols = []
-        for col in data.columns:
-            if "maximum temperature" in normalize_column_name(col):
-                matching_cols.append(col)
-        
-        if matching_cols:
-            all_temp_data = pd.Series(dtype=float)
-            for col in matching_cols:
-                col_data = pd.to_numeric(data[col], errors='coerce').dropna()
-                all_temp_data = pd.concat([all_temp_data, col_data], ignore_index=True)
-            
-            if len(all_temp_data) > 0:
-                clean_data = all_temp_data
-                ax.clear()
-                
-                if plot_type == "Line Plot":
-                    ax.plot(range(len(clean_data)), clean_data, marker='o')
-                elif plot_type == "Bar Chart":
-                    ax.bar(range(len(clean_data)), clean_data)
-                elif plot_type == "Histogram":
-                    ax.hist(clean_data, bins=15)
-                elif plot_type == "Scatter Plot":
-                    ax.scatter(range(len(clean_data)), clean_data)
-                
-                ax.set_title(variable + " - " + plot_type)
-                ax.set_xlabel("Data Points")
-                ax.set_ylabel(variable + " (°C)")
-                
-                canvas.draw()
-                notebook.select(0)
-                return
-    elif variable == "Min Temperature":
-        # Combine all min temperature columns
-        matching_cols = []
-        for col in data.columns:
-            if "minimum temperature" in normalize_column_name(col):
-                matching_cols.append(col)
-        
-        if matching_cols:
-            all_temp_data = pd.Series(dtype=float)
-            for col in matching_cols:
-                col_data = pd.to_numeric(data[col], errors='coerce').dropna()
-                all_temp_data = pd.concat([all_temp_data, col_data], ignore_index=True)
-            
-            if len(all_temp_data) > 0:
-                clean_data = all_temp_data
-                ax.clear()
-                
-                if plot_type == "Line Plot":
-                    ax.plot(range(len(clean_data)), clean_data, marker='o')
-                elif plot_type == "Bar Chart":
-                    ax.bar(range(len(clean_data)), clean_data)
-                elif plot_type == "Histogram":
-                    ax.hist(clean_data, bins=15)
-                elif plot_type == "Scatter Plot":
-                    ax.scatter(range(len(clean_data)), clean_data)
-                
-                ax.set_title(variable + " - " + plot_type)
-                ax.set_xlabel("Data Points")
-                ax.set_ylabel(variable + " (°C)")
-                
-                canvas.draw()
-                notebook.select(0)
-                return
-    elif variable == "Rainfall":
-        for col in data.columns:
-            if "rainfall" in col.lower():
-                col_name = col
-                break
-    
-    # Fallback matching
-    if col_name is None:
-        for col in data.columns:
-            if variable in col or ("temp" in col.lower() and "temperature" in variable.lower()):
-                col_name = col
-                break
-    
-    if col_name is None:
-        return
-    
-    # Clean data
-    clean_data = pd.to_numeric(data[col_name], errors='coerce').dropna()
-    
+    if matching_cols:
+        all_temp_data = pd.Series(dtype=float)
+        for col in matching_cols:
+            col_data = pd.to_numeric(data[col], errors='coerce').dropna()
+            all_temp_data = pd.concat([all_temp_data, col_data], ignore_index=True)
+        return all_temp_data
+    return None
+
+def create_plot_visualization(clean_data, plot_type, variable):
+    """Helper function to create the actual plot visualization"""
     ax.clear()
     
-    # Create plot
     if plot_type == "Line Plot":
         ax.plot(range(len(clean_data)), clean_data, marker='o')
     elif plot_type == "Bar Chart":
@@ -180,6 +95,72 @@ def create_plot():
     canvas.draw()
     notebook.select(0)
 
+def create_plot():
+    """Create plot based on selections"""
+    data = get_selected_data()
+    
+    if data.empty:
+        messagebox.showwarning("No Data", "No data available for the selected month or variable.")
+        return
+    
+    variable = variable_var.get()
+    plot_type = plot_var.get()
+    col_name = None
+    clean_data = None
+    
+    # Handle temperature variables with combined columns
+    if variable in ["Max Temperature", "Min Temperature"]:
+        temp_type = "maximum" if variable == "Max Temperature" else "minimum"
+        clean_data = combine_temperature_columns(data, temp_type)
+        
+        if clean_data is not None and len(clean_data) > 0:
+            create_plot_visualization(clean_data, plot_type, variable)
+            return
+    
+    # Handle other variables
+    elif variable == "Max Wind Speed":
+        for col in data.columns:
+            if "speed of maximum wind gust" in col.lower(): 
+                col_name = col
+                break
+    elif variable == "Rainfall":
+        for col in data.columns:
+            if "rainfall" in col.lower():
+                col_name = col
+                break
+    
+    # Fallback matching
+    if col_name is None:
+        for col in data.columns:
+            if variable in col or ("temp" in col.lower() and "temperature" in variable.lower()):
+                col_name = col
+                break
+    
+    if col_name is None:
+        return
+    
+    # Clean data and create plot
+    clean_data = pd.to_numeric(data[col_name], errors='coerce').dropna()
+    create_plot_visualization(clean_data, plot_type, variable)
+
+def generate_stats_text(clean_data, variable):
+    """Helper function to generate statistics text"""
+    stats_info = f"STATISTICS - {variable}\n"
+    stats_info = stats_info + "="*30 + "\n\n"
+    stats_info = stats_info + "Count: " + str(len(clean_data)) + "\n"
+    stats_info = stats_info + "Mean: " + str(round(clean_data.mean(), 2)) + "\n"
+    stats_info = stats_info + "Median: " + str(round(clean_data.median(), 2)) + "\n"
+    stats_info = stats_info + "Standard Deviation: " + str(round(clean_data.std(), 2)) + "\n"
+    stats_info = stats_info + "Minimum: " + str(round(clean_data.min(), 2)) + "\n"
+    stats_info = stats_info + "Maximum: " + str(round(clean_data.max(), 2)) + "\n"
+    return stats_info
+
+def display_stats(stats_info):
+    """Helper function to display statistics in the text widget"""
+    stats_text.delete(1.0, tk.END)
+    stats_text.insert(1.0, stats_info)
+    notebook.select(1)
+
 def show_stats():
     """Show basic statistics"""
     data = get_selected_data()
@@ -192,71 +173,24 @@ def show_stats():
     
     variable = variable_var.get()
     col_name = None
+    clean_data = None
     
-    # Column matching logic
-    if variable == "Max Wind Speed":
+    # Handle temperature variables with combined columns
+    if variable in ["Max Temperature", "Min Temperature"]:
+        temp_type = "maximum" if variable == "Max Temperature" else "minimum"
+        clean_data = combine_temperature_columns(data, temp_type)
+        
+        if clean_data is not None and len(clean_data) > 0:
+            stats_info = generate_stats_text(clean_data, variable)
+            display_stats(stats_info)
+            return
+    
+    # Handle other variables
+    elif variable == "Max Wind Speed":
         for col in data.columns:
             if "speed of maximum wind gust" in col.lower():
                 col_name = col
                 break
-    elif variable == "Max Temperature":
-        # Combine all max temperature columns
-        matching_cols = []
-        for col in data.columns:
-            if "maximum temperature" in normalize_column_name(col):
-                matching_cols.append(col)
-        
-        if matching_cols:
-            all_temp_data = pd.Series(dtype=float)
-            for col in matching_cols:
-                col_data = pd.to_numeric(data[col], errors='coerce').dropna()
-                all_temp_data = pd.concat([all_temp_data, col_data], ignore_index=True)
-            
-            if len(all_temp_data) > 0:
-                clean_data = all_temp_data
-                
-                stats_info = f"STATISTICS - {variable}\\n"
-                stats_info = stats_info + "="*30 + "\\n\\n"
-                stats_info = stats_info + "Count: " + str(len(clean_data)) + "\\n"
-                stats_info = stats_info + "Mean: " + str(round(clean_data.mean(), 2)) + "\\n"
-                stats_info = stats_info + "Median: " + str(round(clean_data.median(), 2)) + "\\n"
-                stats_info = stats_info + "Standard Deviation: " + str(round(clean_data.std(), 2)) + "\\n"
-                stats_info = stats_info + "Minimum: " + str(round(clean_data.min(), 2)) + "\\n"
-                stats_info = stats_info + "Maximum: " + str(round(clean_data.max(), 2)) + "\\n"
-                
-                stats_text.delete(1.0, tk.END)
-                stats_text.insert(1.0, stats_info)
-                notebook.select(1)
-                return
-    elif variable == "Min Temperature":
-        # Combine all min temperature columns
-        matching_cols = []
-        for col in data.columns:
-            if "minimum temperature" in normalize_column_name(col):
-                matching_cols.append(col)
-        
-        if matching_cols:
-            all_temp_data = pd.Series(dtype=float)
-            for col in matching_cols:
-                col_data = pd.to_numeric(data[col], errors='coerce').dropna()
-                all_temp_data = pd.concat([all_temp_data, col_data], ignore_index=True)
-            
-            if len(all_temp_data) > 0:
-                clean_data = all_temp_data
-                
-                stats_info = f"STATISTICS - {variable}\\n"
-                stats_info = stats_info + "="*30 + "\\n\\n"
-                stats_info = stats_info + "Count: " + str(len(clean_data)) + "\\n"
-                stats_info = stats_info + "Mean: " + str(round(clean_data.mean(), 2)) + "\\n"
-                stats_info = stats_info + "Median: " + str(round(clean_data.median(), 2)) + "\\n"
-                stats_info = stats_info + "Standard Deviation: " + str(round(clean_data.std(), 2)) + "\\n"
-                stats_info = stats_info + "Minimum: " + str(round(clean_data.min(), 2)) + "\\n"
-                stats_info = stats_info + "Maximum: " + str(round(clean_data.max(), 2)) + "\\n"
-                
-                stats_text.delete(1.0, tk.END)
-                stats_text.insert(1.0, stats_info)
-                notebook.select(1)
-                return
     elif variable == "Rainfall":
         for col in data.columns:
             if "rainfall" in col.lower():
@@ -278,19 +212,8 @@ def show_stats():
     
     # Clean data and calculate stats
     clean_data = pd.to_numeric(data[col_name], errors='coerce').dropna()
-    
-    stats_info = f"STATISTICS - {variable}\\n"
-    stats_info = stats_info + "="*30 + "\\n\\n"
-    stats_info = stats_info + "Count: " + str(len(clean_data)) + "\\n"
-    stats_info = stats_info + "Mean: " + str(round(clean_data.mean(), 2)) + "\\n"
-    stats_info = stats_info + "Std Dev: " + str(round(clean_data.std(), 2)) + "\\n"
-    stats_info = stats_info + "Min: " + str(round(clean_data.min(), 2)) + "\\n"
-    stats_info = stats_info + "Max: " + str(round(clean_data.max(), 2)) + "\\n"
-    stats_info = stats_info + "Median: " + str(round(clean_data.median(), 2)) + "\\n"
-    
-    stats_text.delete(1.0, tk.END)
-    stats_text.insert(1.0, stats_info)
-    notebook.select(1)
+    stats_info = generate_stats_text(clean_data, variable)
+    display_stats(stats_info)
 
 def clear_plot():
     """Clear the plot"""
