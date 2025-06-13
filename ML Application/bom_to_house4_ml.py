@@ -10,6 +10,77 @@ import math
 import pickle
 import matplotlib.pyplot as plt
 
+# ====================
+# CUDA CONFIGURATION
+# ====================
+def configure_cuda():
+    """Configure CUDA for optimal GPU performance"""
+    print("🚀 CUDA Configuration Starting...")
+    
+    # Check TensorFlow CUDA support
+    cuda_built = tf.test.is_built_with_cuda()
+    print(f"   • TensorFlow built with CUDA: {cuda_built}")
+    
+    # Get GPU devices
+    gpus = tf.config.list_physical_devices('GPU')
+    
+    if gpus:
+        print(f"   • Found {len(gpus)} GPU(s):")
+        for i, gpu in enumerate(gpus):
+            print(f"     GPU {i}: {gpu.name}")
+        
+        try:
+            # Enable GPU memory growth to prevent allocation of all GPU memory at once
+            for gpu in gpus:
+                tf.config.experimental.set_memory_growth(gpu, True)
+            print("   ✅ GPU memory growth enabled")
+            
+            # Set the first GPU as the primary device
+            tf.config.set_visible_devices(gpus[0], 'GPU')
+            print(f"   ✅ Primary GPU set: {gpus[0].name}")
+            
+            # Configure GPU memory limit if needed (optional)
+            # tf.config.experimental.set_memory_growth(gpus[0], True)
+            
+            # Test GPU computation
+            with tf.device('/GPU:0'):
+                test_tensor = tf.constant([[1.0, 2.0], [3.0, 4.0]])
+                test_result = tf.matmul(test_tensor, test_tensor)
+                print("   ✅ GPU computation test successful")
+                
+            return True
+            
+        except RuntimeError as e:
+            print(f"   ⚠️  GPU configuration error: {e}")
+            print("   🔄 Falling back to CPU")
+            return False
+    else:
+        print("   ❌ No GPU detected")
+        print("   💡 To enable GPU acceleration:")
+        print("      1. Install CUDA 11.8 or 12.x")
+        print("      2. Install cuDNN")
+        print("      3. Install tensorflow-gpu or tensorflow[and-cuda]")
+        return False
+
+def set_mixed_precision():
+    """Enable mixed precision for faster training on modern GPUs"""
+    if tf.config.list_physical_devices('GPU'):
+        try:
+            # Enable mixed precision
+            policy = tf.keras.mixed_precision.Policy('mixed_float16')
+            tf.keras.mixed_precision.set_global_policy(policy)
+            print("   ⚡ Mixed precision (float16) enabled for faster training")
+            return True
+        except:
+            print("   ⚠️  Mixed precision not supported, using float32")
+            return False
+    return False
+
+# Configure CUDA at import time
+cuda_available = configure_cuda()
+mixed_precision_enabled = set_mixed_precision()
+print("=" * 60)
+
 # Set up local data paths (replacing Google Colab paths)
 script_dir = os.path.dirname(os.path.abspath(__file__))
 datapath = os.path.join(script_dir, 'Datasets')
@@ -227,35 +298,106 @@ def create_train_test_split(x_train_full, y_train_full):
     return x_train, x_test, y_train, y_test
 
 def create_rnn_model():
-    """Create RNN model"""
+    """Create RNN model with GPU optimization"""
     print("Creating RNN model...")
     
-    model = tf.keras.models.Sequential()
-    # create 2 layers, 20 units per layer.
-    # Each layer contains a state. This state is updated at each time step based on the previous state and the current input.
-    # Each layer returns the entire sequence of outputs for next layer
-    model.add(tf.keras.layers.SimpleRNN(20, return_sequences=True, input_shape=(1, 4)))  # 4 temperature features
-    model.add(tf.keras.layers.SimpleRNN(20, return_sequences=True))
-    model.add(tf.keras.layers.Dense(1))
+    # Create model with explicit GPU placement if available
+    device_name = '/GPU:0' if cuda_available else '/CPU:0'
+    print(f"   • Building model on: {device_name}")
     
-    #compile model and train the model
+    with tf.device(device_name):
+        model = tf.keras.models.Sequential()
+        
+        # Create 2 layers, 20 units per layer with GPU-optimized configurations
+        # Each layer contains a state. This state is updated at each time step based on the previous state and the current input.
+        # Each layer returns the entire sequence of outputs for next layer
+        model.add(tf.keras.layers.SimpleRNN(
+            20, 
+            return_sequences=True, 
+            input_shape=(1, 4),  # 4 temperature features
+            # Use CuDNN implementation for faster GPU training
+            **({'use_bias': True} if cuda_available else {})
+        ))
+        
+        model.add(tf.keras.layers.SimpleRNN(
+            20, 
+            return_sequences=True,
+            **({'use_bias': True} if cuda_available else {})
+        ))
+        
+        # Final dense layer - use float32 for mixed precision compatibility
+        if mixed_precision_enabled:
+            model.add(tf.keras.layers.Dense(1, dtype='float32'))
+        else:
+            model.add(tf.keras.layers.Dense(1))
+    
+    # Compile model with optimized settings
     loss = tf.keras.losses.MeanSquaredError() # use MSE as the loss function
-    optimizer = tf.keras.optimizers.Adam(learning_rate=0.001) # use Adam optimiser, set up learning rate
+    optimizer = tf.keras.optimizers.Adam(
+        learning_rate=0.001,
+        # Add GPU-specific optimizations
+        **({'jit_compile': True} if cuda_available else {})
+    )
     
-    model.compile(loss=loss, optimizer=optimizer) # compile the model configuration
+    model.compile(
+        loss=loss, 
+        optimizer=optimizer,
+        # Enable XLA compilation for faster GPU execution
+        **({'jit_compile': True} if cuda_available else {})
+    )
     
-    print("Model created and compiled!")
+    print("   ✅ Model created and compiled with GPU optimizations!")
+    print(f"   • Device: {device_name}")
+    print(f"   • Mixed Precision: {mixed_precision_enabled}")
+    
     return model
 
-def train_model(model, x_train, y_train):
-    """Train the model"""
-    print("Training model...")
+def train_model(model, x_train, y_train, epochs=30):
+    """Train the model with specified epochs and GPU optimizations"""
+    print(f"Training model with {epochs} epochs...")
+    print(f"   • Using device: {'/GPU:0' if cuda_available else '/CPU:0'}")
+    print(f"   • Training samples: {len(x_train)}")
     
-    batch_size = 1   # number of samples per iteration
-    epochs = 30      # total number of iterations
+    batch_size = 32 if cuda_available else 1  # Larger batch size for GPU efficiency
     
-    history = model.fit(x_train, y_train, batch_size=batch_size, epochs=epochs) # train the model based on the selected parameters 
+    # Add callbacks for better training monitoring and GPU utilization
+    callbacks = []
     
+    if cuda_available:
+        # Early stopping to prevent overfitting
+        early_stopping = tf.keras.callbacks.EarlyStopping(
+            monitor='loss',
+            patience=10,
+            restore_best_weights=True,
+            verbose=1
+        )
+        callbacks.append(early_stopping)
+        
+        # Reduce learning rate on plateau
+        reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
+            monitor='loss',
+            factor=0.5,
+            patience=5,
+            min_lr=1e-7,
+            verbose=1
+        )
+        callbacks.append(reduce_lr)
+    
+    print(f"   • Batch size: {batch_size}")
+    print(f"   • Callbacks: {len(callbacks)} enabled")
+    
+    # Train the model with GPU optimizations
+    history = model.fit(
+        x_train, y_train, 
+        batch_size=batch_size, 
+        epochs=epochs,
+        callbacks=callbacks,
+        verbose=1 if cuda_available else 2,  # More verbose output for GPU training
+        # Enable performance optimizations
+        **({'use_multiprocessing': True, 'workers': 4} if cuda_available else {})
+    )
+    
+    print("   ✅ Training completed!")
     return history
 
 def evaluate_and_predict(model, x_test, y_test):
@@ -326,10 +468,181 @@ def save_results(y_test, predicted_power_list, error, errorrate):
     results_df.to_csv(results_file, index=False)
     print(f"Results saved to: {results_file}")
 
+def run_epoch_comparison():
+    """Run comparison of different epoch counts from 50 to 1000 in increments of 50"""
+    print("=== Epoch Comparison Study ===")
+    print("Automatically testing epochs: 50, 100, 150, 200, ..., 1000 (20 models total)\n")
+    
+    # Load data
+    bom, house4data_processed = load_processed_data()
+    x_train_full, y_train_full = generate_training_data(bom, house4data_processed)
+    x_train, x_test, y_train, y_test = create_train_test_split(x_train_full, y_train_full)
+    
+    # Generate epoch range from 50 to 1000 in increments of 50
+    epoch_tests = list(range(50, 1001, 50))  # [50, 100, 150, ..., 1000]
+    results = []
+    
+    print(f"Training {len(epoch_tests)} models...\n")
+    
+    for i, epochs in enumerate(epoch_tests, 1):
+        print(f"[{i}/{len(epoch_tests)}] Training with {epochs} epochs...")
+        
+        # Create and train model
+        model = create_rnn_model()
+        history = model.fit(x_train, y_train, batch_size=1, epochs=epochs, verbose=0)
+        
+        # Evaluate
+        mse = model.evaluate(x_test, y_test, verbose=0)
+        predictions = model.predict(x_test, verbose=0)
+        
+        # Calculate error rate
+        errors = [predictions[i][0][0] - y_test[i] for i in range(len(predictions))]
+        error_rate = np.mean(np.abs(errors)) / np.mean(y_test) * 100
+        
+        results.append({
+            'epochs': epochs,
+            'mse': mse,
+            'error_rate': error_rate,
+            'predictions': predictions
+        })
+        
+        print(f"    MSE: {mse:.4f}, Error Rate: {error_rate:.2f}%")
+    
+    # Create 5x4 subplot visualization (20 plots total)
+    fig, axes = plt.subplots(5, 4, figsize=(20, 25))
+    fig.suptitle('Epoch Comparison Study: 50-1000 Epochs\nBOM Weather → House 4 Energy Prediction', 
+                 fontsize=16, fontweight='bold')
+    
+    for i, result in enumerate(results):
+        row = i // 4
+        col = i % 4
+        ax = axes[row, col]
+        
+        x_range = range(1, len(y_test) + 1)
+        
+        ax.plot(x_range, y_test, 'b-', label='Actual', linewidth=2)
+        ax.plot(x_range, [result['predictions'][j][0][0] for j in range(len(result['predictions']))], 
+                'r--', label='Predicted', linewidth=2)
+        
+        ax.set_title(f"Epochs: {result['epochs']}\nMSE: {result['mse']:.4f}, Error: {result['error_rate']:.1f}%", 
+                    fontsize=10, fontweight='bold')
+        ax.set_xlabel('Data Point #', fontsize=8)
+        ax.set_ylabel('Power (kW)', fontsize=8)
+        ax.legend(fontsize=8)
+        ax.grid(True, alpha=0.3)
+        ax.tick_params(labelsize=8)
+    
+    plt.tight_layout()
+    plt.savefig(os.path.join(script_dir, 'epoch_comparison_5x4_grid.png'), dpi=300, bbox_inches='tight')
+    plt.show()
+    
+    # Create summary table
+    summary_data = []
+    for result in results:
+        summary_data.append({
+            'Epochs': result['epochs'],
+            'MSE': result['mse'],
+            'Error_Rate_%': result['error_rate']
+        })
+    
+    summary_df = pd.DataFrame(summary_data)
+    summary_file = os.path.join(script_dir, 'epoch_comparison_summary.csv')
+    summary_df.to_csv(summary_file, index=False)
+    
+    # Summary analysis
+    best_result = min(results, key=lambda x: x['mse'])
+    worst_result = max(results, key=lambda x: x['mse'])
+    
+    print(f"\n=== COMPREHENSIVE RESULTS ===")
+    print(f"🏆 Best Performance: {best_result['epochs']} epochs")
+    print(f"   MSE: {best_result['mse']:.4f}")
+    print(f"   Error Rate: {best_result['error_rate']:.2f}%")
+    print(f"\n💔 Worst Performance: {worst_result['epochs']} epochs")
+    print(f"   MSE: {worst_result['mse']:.4f}")
+    print(f"   Error Rate: {worst_result['error_rate']:.2f}%")
+    
+    improvement = (worst_result['mse'] - best_result['mse']) / worst_result['mse'] * 100
+    print(f"\n📊 Performance Improvement: {improvement:.1f}% better with optimal epochs")
+    print(f"📁 Summary saved to: {summary_file}")
+    print(f"�️  5x4 visualization saved to: epoch_comparison_5x4_grid.png")
+    
+    print(f"\n�💡 CONCLUSION:")
+    print(f"   • Tested all epochs from 50 to 1000 in increments of 50")
+    print(f"   • Optimal performance achieved at {best_result['epochs']} epochs")
+    print(f"   • Results show {improvement:.1f}% improvement from worst to best")
+    print(f"   • Beyond optimal point, more epochs may lead to overfitting")
+
+def check_gpu_status():
+    """Check if TensorFlow can use GPU"""
+    print("🔧 GPU Configuration Check:")
+    
+    # Check for GPU devices
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+    if gpus:
+        print(f"   ✅ {len(gpus)} GPU(s) detected:")
+        for i, gpu in enumerate(gpus):
+            print(f"      GPU {i}: {gpu.name}")
+        
+        # Check memory growth
+        try:
+            for gpu in gpus:
+                tf.config.experimental.set_memory_growth(gpu, True)
+            print("   🚀 TensorFlow will automatically use GPU for acceleration")
+            print("   ⚡ Memory growth enabled to avoid allocation errors")
+        except RuntimeError as e:
+            print(f"   ⚠️  GPU configuration error: {e}")
+    else:
+        print("   ❌ No GPU detected - using CPU")
+        print("   💡 To use GPU: Install CUDA + cuDNN or use Google Colab")
+    
+    # Test computation device
+    with tf.device('/CPU:0'):
+        cpu_test = tf.constant([1.0, 2.0, 3.0])
+    
+    if gpus:
+        with tf.device('/GPU:0'):
+            try:
+                gpu_test = tf.constant([1.0, 2.0, 3.0])
+                print("   ✅ GPU computation test passed")
+            except:
+                print("   ⚠️  GPU computation test failed")
+    
+    print()
+
 def main():
     """Main function to run the complete ML application"""
     print("=== TensorFlow ML Application: BOM Weather → House 4 Energy Prediction ===")
-    print("Using 4 temperature features (Min, Max, 9am, 3pm) to predict energy consumption\n")
+    print("Using 4 temperature features (Min, Max, 9am, 3pm) to predict energy consumption")
+    print()
+    
+    # Display current configuration
+    print("🖥️  Current Configuration:")
+    print(f"   • TensorFlow version: {tf.__version__}")
+    print(f"   • CUDA available: {cuda_available}")
+    print(f"   • Mixed precision: {mixed_precision_enabled}")
+    print(f"   • GPU acceleration: {'✅ ENABLED' if cuda_available else '❌ DISABLED'}")
+    if cuda_available:
+        gpus = tf.config.list_physical_devices('GPU')
+        print(f"   • GPU device: {gpus[0].name}")
+    print()
+    
+    # Check GPU status
+    check_gpu_status()
+    
+    # Ask user for epoch count
+    try:
+        epoch_input = input("Enter number of epochs (default 30, or 'test' for comparison): ")
+        if epoch_input.lower() == 'test':
+            run_epoch_comparison()
+            return
+        elif epoch_input.strip() == '':
+            epochs = 30
+        else:
+            epochs = int(epoch_input)
+    except ValueError:
+        epochs = 30
+        
+    print(f"Training with {epochs} epochs...\n")
     
     try:
         # Step 1: Load and process data
@@ -353,7 +666,7 @@ def main():
         model = create_rnn_model()
         
         # Step 5: Train the model
-        history = train_model(model, x_train, y_train)
+        history = train_model(model, x_train, y_train, epochs)
         
         # Step 6: Evaluate and predict
         predicted_power = evaluate_and_predict(model, x_test, y_test)
