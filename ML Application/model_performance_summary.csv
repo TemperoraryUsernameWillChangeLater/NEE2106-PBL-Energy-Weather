@@ -1,5 +1,0 @@
-Model,Factors Count,Primary Factors,MAE,RMSE,R²
-Two Factor - Temperature + Weather_Condition_x_encoded,2,"Temperature, Weather_Condition_x_encoded",105.43,122.0,-0.039
-Multi-Factor (All Features),11,"Temperature, Weather_Condition_x_encoded",106.34,122.74,-0.052
-Single Factor - Temperature,1,Temperature,106.72,122.81,-0.053
-Single Factor - Weather_Condition_x_encoded,1,Weather_Condition_x_encoded,106.82,123.07,-0.058

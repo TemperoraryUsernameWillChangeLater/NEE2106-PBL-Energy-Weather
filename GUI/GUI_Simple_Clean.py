@@ -184,7 +184,7 @@ def generate_stats_text(clean_data, variable): # Generate formatted statistics t
     stats_info = stats_info + "Maximum: " + str(round(clean_data.max(), 2)) + "\n"
     return stats_info
 
-def display_stats(stats_info): # Display formatted statistics in the GUI text widget and switch to stats tab
+def display_stats(stats_info): # Display formatted statistics in the GUI text widget and switch to stats tab    
     """Helper function to display statistics in the text widget"""
     stats_text.delete(1.0, tk.END)
     stats_text.insert(1.0, stats_info)
@@ -333,3 +333,4 @@ def main(): # Main function to run the application - loads data and starts GUI
 # Run the application
 if __name__ == "__main__":
     main()
+    
