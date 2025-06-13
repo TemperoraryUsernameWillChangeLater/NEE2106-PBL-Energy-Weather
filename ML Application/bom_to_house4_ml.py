@@ -69,14 +69,18 @@ def process_bom_data():
         data = []
         flag = True
         
-        # Load columns: Rainfall (index 3), 9am temp (index 4), 3pm temp (index 5)
-        for i in range(3, min(6, len(line))):
-            tmp = float(line[i]) if not pd.isna(line[i]) else float('nan')
-            if math.isnan(tmp):  # any NaN will drop the record
+        # Load columns: MinTemp (index 1), MaxTemp (index 2), 9am temp (index 4), 3pm temp (index 5)
+        temp_indices = [1, 2, 4, 5]  # MinTemp, MaxTemp, 9amTemp, 3pmTemp
+        for i in temp_indices:
+            if i < len(line):
+                tmp = float(line[i]) if not pd.isna(line[i]) else float('nan')
+                if math.isnan(tmp):  # any NaN will drop the record
+                    flag = False
+                data.append(tmp)
+            else:
                 flag = False
-            data.append(tmp)
         
-        if flag and len(data) == 3:  # Ensure we have all 3 values
+        if flag and len(data) == 4:  # Ensure we have all 4 temperature values
             bom[key] = data
     
     print(f"BOM data processed: {len(bom)} valid records")
@@ -168,27 +172,31 @@ def load_processed_data():
     return bom, house4data_processed
 
 def generate_training_data(bom, house4data_processed):
-    """Generate full dataset for ML - TWO factor learning: temperature - power"""
+    """Generate full dataset for ML - FOUR factor learning: temperature features - power"""
     print("Generating training data...")
     
     x_train_full = []
-    y_train_full = []
-    
-    # Two factor: rainfall and temperature at different times
+    y_train_full = []    # Four factor: MinTemp, MaxTemp, 9amTemp, 3pmTemp
     for k in bom.keys():
         k1 = k + '09'  # 9am data
         k2 = k + '15'  # 3pm data
         keys = house4data_processed.keys()
         
         if k1 in keys:
-            # Use rainfall and 9am temperature
-            x_train_full.append([bom[k][0], bom[k][1]])  # rainfall, 9am temp
-            y_train_full.append(house4data_processed[k1])
+            # Use all 4 temperature features for 9am energy prediction
+            if len(bom[k]) >= 4:
+                x_train_full.append([bom[k][0], bom[k][1], bom[k][2], bom[k][3]])  # MinTemp, MaxTemp, 9amTemp, 3pmTemp
+                y_train_full.append(house4data_processed[k1])
+            else:
+                print(f"Warning: BOM data for {k} has only {len(bom[k])} values, expected 4")
         
         if k2 in keys:
-            # Use rainfall and 3pm temperature
-            x_train_full.append([bom[k][0], bom[k][2]])  # rainfall, 3pm temp
-            y_train_full.append(house4data_processed[k2])
+            # Use all 4 temperature features for 3pm energy prediction
+            if len(bom[k]) >= 4:
+                x_train_full.append([bom[k][0], bom[k][1], bom[k][2], bom[k][3]])  # MinTemp, MaxTemp, 9amTemp, 3pmTemp
+                y_train_full.append(house4data_processed[k2])
+            else:
+                print(f"Warning: BOM data for {k} has only {len(bom[k])} values, expected 4")
     
     print(f"Generated {len(x_train_full)} training samples")
     return x_train_full, y_train_full
@@ -209,10 +217,9 @@ def create_train_test_split(x_train_full, y_train_full):
     y_test = np.array(y_test) / 1000.00   #divide by 1000 to show power in kw
     x_train = np.array(x_train)
     y_train = np.array(y_train) / 1000.00
-    
-    #reshape dataset to 3 dimensions for RNN
-    x_train = x_train.reshape(len(x_train), 1, 2)
-    x_test = x_test.reshape(len(x_test), 1, 2)
+      #reshape dataset to 3 dimensions for RNN
+    x_train = x_train.reshape(len(x_train), 1, 4)  # 4 temperature features
+    x_test = x_test.reshape(len(x_test), 1, 4)
     
     print(f"Training set: {x_train.shape}")
     print(f"Test set: {x_test.shape}")
@@ -226,7 +233,8 @@ def create_rnn_model():
     model = tf.keras.models.Sequential()
     # create 2 layers, 20 units per layer.
     # Each layer contains a state. This state is updated at each time step based on the previous state and the current input.
-    # Each layer returns the entire sequence of outputs for next layer    model.add(tf.keras.layers.SimpleRNN(20, return_sequences=True, input_shape=(1, 2)))
+    # Each layer returns the entire sequence of outputs for next layer
+    model.add(tf.keras.layers.SimpleRNN(20, return_sequences=True, input_shape=(1, 4)))  # 4 temperature features
     model.add(tf.keras.layers.SimpleRNN(20, return_sequences=True))
     model.add(tf.keras.layers.Dense(1))
     
@@ -246,7 +254,7 @@ def train_model(model, x_train, y_train):
     batch_size = 1   # number of samples per iteration
     epochs = 30      # total number of iterations
     
-    history = model.fit(x_train, y_train, batch_size=batch_size, epochs=epochs) # train the model based on the selected parameters
+    history = model.fit(x_train, y_train, batch_size=batch_size, epochs=epochs) # train the model based on the selected parameters 
     
     return history
 
@@ -321,7 +329,7 @@ def save_results(y_test, predicted_power_list, error, errorrate):
 def main():
     """Main function to run the complete ML application"""
     print("=== TensorFlow ML Application: BOM Weather → House 4 Energy Prediction ===")
-    print("Using rainfall and temperature data to predict energy consumption\n")
+    print("Using 4 temperature features (Min, Max, 9am, 3pm) to predict energy consumption\n")
     
     try:
         # Step 1: Load and process data
