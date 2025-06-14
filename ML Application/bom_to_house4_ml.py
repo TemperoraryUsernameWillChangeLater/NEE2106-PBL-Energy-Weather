@@ -84,13 +84,17 @@ print("=" * 60)
 # Set up local data paths (replacing Google Colab paths)
 script_dir = os.path.dirname(os.path.abspath(__file__))
 datapath = os.path.join(script_dir, 'Datasets')
+refined_datasets_dir = os.path.join(script_dir, 'Refined Datasets')
+
+# Create Refined Datasets directory if it doesn't exist
+os.makedirs(refined_datasets_dir, exist_ok=True)
 
 bomdata = os.path.join(datapath, 'BOM_year.csv')
 house4data = os.path.join(datapath, 'House 4_Melb West.csv')
 
-# Create processed data files
-bomfile = os.path.join(script_dir, 'bom.dat')
-house4file = os.path.join(script_dir, 'house4.dat')
+# Create processed data files in Refined Datasets directory
+bomfile = os.path.join(refined_datasets_dir, 'bom.dat')
+house4file = os.path.join(refined_datasets_dir, 'house4.dat')
 
 #function to change month from string to number
 def mTon(m):
@@ -464,7 +468,7 @@ def save_results(y_test, predicted_power_list, error, errorrate):
         'Error_Rate_%': errorrate
     })
     
-    results_file = os.path.join(script_dir, 'bom_to_house4_results.csv')
+    results_file = os.path.join(refined_datasets_dir, 'bom_to_house4_results.csv')
     results_df.to_csv(results_file, index=False)
     print(f"Results saved to: {results_file}")
 
@@ -510,8 +514,7 @@ def run_epoch_comparison():
     
     # Create 5x4 subplot visualization (20 plots total)
     fig, axes = plt.subplots(5, 4, figsize=(20, 25))
-    fig.suptitle('Epoch Comparison Study: 50-1000 Epochs\nBOM Weather → House 4 Energy Prediction', 
-                 fontsize=16, fontweight='bold')
+    fig.suptitle('Epoch Comparison Study: 50-1000 Epochs\nBOM Weather → House 4 Energy Prediction', fontsize=16, fontweight='bold')
     
     for i, result in enumerate(results):
         row = i // 4
@@ -533,7 +536,6 @@ def run_epoch_comparison():
         ax.tick_params(labelsize=8)
     
     plt.tight_layout()
-    plt.savefig(os.path.join(script_dir, 'epoch_comparison_5x4_grid.png'), dpi=300, bbox_inches='tight')
     plt.show()
     
     # Create summary table
@@ -546,7 +548,7 @@ def run_epoch_comparison():
         })
     
     summary_df = pd.DataFrame(summary_data)
-    summary_file = os.path.join(script_dir, 'epoch_comparison_summary.csv')
+    summary_file = os.path.join(refined_datasets_dir, 'epoch_comparison_summary.csv')
     summary_df.to_csv(summary_file, index=False)
     
     # Summary analysis
@@ -564,9 +566,8 @@ def run_epoch_comparison():
     improvement = (worst_result['mse'] - best_result['mse']) / worst_result['mse'] * 100
     print(f"\n📊 Performance Improvement: {improvement:.1f}% better with optimal epochs")
     print(f"📁 Summary saved to: {summary_file}")
-    print(f"�️  5x4 visualization saved to: epoch_comparison_5x4_grid.png")
     
-    print(f"\n�💡 CONCLUSION:")
+    print(f"\n💡 CONCLUSION:")
     print(f"   • Tested all epochs from 50 to 1000 in increments of 50")
     print(f"   • Optimal performance achieved at {best_result['epochs']} epochs")
     print(f"   • Results show {improvement:.1f}% improvement from worst to best")
@@ -603,11 +604,24 @@ def run_incremental_epoch_comparison():
             'predictions': predictions
         })
         print(f"    MSE: {mse:.4f}, Error Rate: {error_rate:.2f}%")
-        prev_epochs = epochs
-
-    # Create 5x2 subplot visualization (10 plots total)
+        
+        # Save results to CSV after each iteration
+        save_epoch_results_to_csv(epochs, y_test, predictions, mse, error_rate, i == 1)  # header only on first iteration
+        
+        prev_epochs = epochs# Create 5x2 subplot visualization (10 plots total) with dynamic font scaling
     fig, axes = plt.subplots(5, 2, figsize=(16, 20))
-    fig.suptitle('Incremental Epoch Comparison: 50-500 Epochs\nBOM Weather → House 4 Energy Prediction', fontsize=16, fontweight='bold')
+    
+    # Calculate dynamic font sizes based on figure size
+    base_size = min(fig.get_figwidth(), fig.get_figheight())
+    title_font = max(8, int(base_size * 0.8))
+    subplot_title_font = max(6, int(base_size * 0.5))
+    label_font = max(5, int(base_size * 0.4))
+    legend_font = max(4, int(base_size * 0.35))
+    tick_font = max(4, int(base_size * 0.3))
+    
+    fig.suptitle('Incremental Epoch Comparison: 50-500 Epochs\nBOM Weather → House 4 Energy Prediction', 
+                fontsize=title_font, fontweight='bold')
+    
     for i, result in enumerate(results):
         row = i // 2
         col = i % 2
@@ -617,29 +631,85 @@ def run_incremental_epoch_comparison():
         ax.plot(x_range, [result['predictions'][j][0][0] for j in range(len(result['predictions']))], 
                 'r--', label='Predicted', linewidth=2)
         ax.set_title(f"Epochs: {result['epochs']}\nMSE: {result['mse']:.4f}, Error: {result['error_rate']:.1f}%", 
-                    fontsize=10, fontweight='bold')
-        ax.set_xlabel('Data Point #', fontsize=8)
-        ax.set_ylabel('Power (kW)', fontsize=8)
-        ax.legend(fontsize=8)
+                    fontsize=subplot_title_font, fontweight='bold')
+        ax.set_xlabel('Data Point #', fontsize=label_font)
+        ax.set_ylabel('Power (kW)', fontsize=label_font)
+        ax.legend(fontsize=legend_font)
         ax.grid(True, alpha=0.3)
-        ax.tick_params(labelsize=8)
+        ax.tick_params(labelsize=tick_font)
+    
     plt.tight_layout()
-    plt.savefig(os.path.join(script_dir, 'incremental_epoch_comparison_5x2_grid.png'), dpi=300, bbox_inches='tight')
-    plt.show()
+    plt.show(block=False)  # Non-blocking display
 
+    # Create difference comparison plot (5x2 grid with 9 plots showing consecutive differences)
+    if len(results) > 1:
+        fig2, axes2 = plt.subplots(5, 2, figsize=(16, 20))
+        
+        # Calculate dynamic font sizes for difference plot
+        diff_title_font = max(8, int(base_size * 0.8))
+        diff_subplot_title_font = max(6, int(base_size * 0.5))
+        diff_label_font = max(5, int(base_size * 0.4))
+        diff_legend_font = max(4, int(base_size * 0.35))
+        diff_tick_font = max(4, int(base_size * 0.3))
+        
+        fig2.suptitle('Prediction Differences Between Consecutive Epochs\n(Current Epoch - Previous Epoch)',fontsize=diff_title_font, fontweight='bold')
+        
+        # Calculate differences between consecutive epochs
+        for i in range(len(results) - 1):
+            row = i // 2
+            col = i % 2
+            ax = axes2[row, col]
+            
+            # Get predictions for current and previous epoch
+            current_pred = [results[i+1]['predictions'][j][0][0] for j in range(len(results[i+1]['predictions']))]
+            previous_pred = [results[i]['predictions'][j][0][0] for j in range(len(results[i]['predictions']))]
+            
+            # Calculate difference (current - previous)
+            prediction_diff = [current_pred[j] - previous_pred[j] for j in range(len(current_pred))]
+            
+            x_range = range(1, len(prediction_diff) + 1)
+            ax.plot(x_range, prediction_diff, 'g-', linewidth=2, label='Prediction Difference')
+            ax.axhline(y=0, color='k', linestyle='--', alpha=0.5)
+              # Calculate statistics
+            mean_diff = np.mean(prediction_diff)
+            std_diff = np.std(prediction_diff)
+            
+            # Save difference results to CSV
+            save_difference_results_to_csv(results[i]['epochs'], results[i+1]['epochs'], 
+                                          prediction_diff, mean_diff, std_diff, i == 0)  # header only on first iteration
+            
+            ax.set_title(f"Epochs {results[i]['epochs']} → {results[i+1]['epochs']}\nMean Δ: {mean_diff:.4f}, Std: {std_diff:.4f}", 
+                        fontsize=diff_subplot_title_font, fontweight='bold')
+            ax.set_xlabel('Data Point #', fontsize=diff_label_font)
+            ax.set_ylabel('Prediction Difference (kW)', fontsize=diff_label_font)
+            ax.legend(fontsize=diff_legend_font)
+            ax.grid(True, alpha=0.3)
+            ax.tick_params(labelsize=diff_tick_font)        # Hide the last subplot since we only have 9 difference plots
+        axes2[4, 1].set_visible(False)
+        
+        plt.tight_layout()
+        plt.show(block=False)  # Non-blocking display
+          # Keep both plots open
+    print("\n📊 Both plots are now displayed simultaneously!")
+    print("💡 All plot windows will remain open. Close them manually when done.")
+    
     # Create summary table
     summary_data = []
-    for result in results:
-        summary_data.append({
+    for result in results:        summary_data.append({
             'Epochs': result['epochs'],
             'MSE': result['mse'],
             'Error_Rate_%': result['error_rate']
         })
+    
     summary_df = pd.DataFrame(summary_data)
-    summary_file = os.path.join(script_dir, 'incremental_epoch_comparison_summary.csv')
+    summary_file = os.path.join(refined_datasets_dir, 'incremental_epoch_comparison_summary.csv')
     summary_df.to_csv(summary_file, index=False)
+    
     print(f"\nSummary saved to: {summary_file}")
-    print(f"5x2 visualization saved to: incremental_epoch_comparison_5x2_grid.png")
+    print(f"📊 Detailed epoch results saved to: Refined Datasets/incremental_epoch_results.csv")
+    if len(results) > 1:
+        print(f"📊 Difference analysis data saved to: Refined Datasets/epoch_differences_results.csv")
+    print(f"📁 All output files are saved in: Refined Datasets/ directory")
 
 def check_gpu_status():
     """Check if TensorFlow can use GPU"""
@@ -677,6 +747,69 @@ def check_gpu_status():
                 print("   ⚠️  GPU computation test failed")
     
     print()
+
+def save_epoch_results_to_csv(epochs, y_test, predictions, mse, error_rate, write_header=False):
+    """Save epoch results to CSV file with proper formatting for plot_dat_files.py"""
+    # Get the script directory and refined datasets path
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    refined_datasets_dir = os.path.join(script_dir, 'Refined Datasets')
+    csv_file = os.path.join(refined_datasets_dir, 'incremental_epoch_results.csv')
+    
+    # Create DataFrame for this epoch's results
+    epoch_data = []
+    for i in range(len(y_test)):
+        epoch_data.append({
+            'Epoch': epochs,
+            'DataPoint': i + 1,
+            'Actual_kW': y_test[i],
+            'Predicted_kW': predictions[i][0][0],
+            'Error_kW': predictions[i][0][0] - y_test[i],
+            'MSE': mse,
+            'Error_Rate_%': error_rate
+        })
+    
+    epoch_df = pd.DataFrame(epoch_data)
+    
+    # Write to CSV (append mode)
+    if write_header:
+        # First iteration - create new file with header
+        epoch_df.to_csv(csv_file, mode='w', index=False, header=True)
+        print(f"    📁 Created CSV file: {csv_file}")
+    else:
+        # Subsequent iterations - append without header
+        epoch_df.to_csv(csv_file, mode='a', index=False, header=False)
+        print(f"    📁 Appended to CSV: Epoch {epochs} data saved")
+
+def save_difference_results_to_csv(epoch_from, epoch_to, prediction_diff, mean_diff, std_diff, write_header=False):
+    """Save difference analysis results to CSV file"""
+    # Get the script directory and refined datasets path
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    refined_datasets_dir = os.path.join(script_dir, 'Refined Datasets')
+    csv_file = os.path.join(refined_datasets_dir, 'epoch_differences_results.csv')
+    
+    # Create DataFrame for this difference analysis
+    diff_data = []
+    for i in range(len(prediction_diff)):
+        diff_data.append({
+            'From_Epoch': epoch_from,
+            'To_Epoch': epoch_to,
+            'DataPoint': i + 1,
+            'Prediction_Difference': prediction_diff[i],
+            'Mean_Difference': mean_diff,
+            'Std_Difference': std_diff
+        })
+    
+    diff_df = pd.DataFrame(diff_data)
+    
+    # Write to CSV (append mode)
+    if write_header:
+        # First difference - create new file with header
+        diff_df.to_csv(csv_file, mode='w', index=False, header=True)
+        print(f"    📁 Created differences CSV: {csv_file}")
+    else:
+        # Subsequent differences - append without header
+        diff_df.to_csv(csv_file, mode='a', index=False, header=False)
+        print(f"    📁 Appended difference: {epoch_from}→{epoch_to} epochs")
 
 def main():
     """Main function to run the complete ML application"""
