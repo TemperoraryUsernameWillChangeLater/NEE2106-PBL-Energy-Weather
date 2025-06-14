@@ -8,7 +8,7 @@ import pandas as pd
 import os
 import math
 import pickle
-import matplotlib.pyplot as plt
+# matplotlib.pyplot import removed - plotting now handled by plot_refined_datasets.py
 
 # ====================
 # CUDA CONFIGURATION
@@ -498,33 +498,9 @@ def run_epoch_comparison():
             'predictions': predictions
         })
         
-        print(f"    MSE: {mse:.4f}, Error Rate: {error_rate:.2f}%")
-    
-    # Create 5x4 subplot visualization (20 plots total)
-    fig, axes = plt.subplots(5, 4, figsize=(20, 25))
-    fig.suptitle('Epoch Comparison Study: 50-1000 Epochs\nBOM Weather → House 4 Energy Prediction', fontsize=16, fontweight='bold')
-    
-    for i, result in enumerate(results):
-        row = i // 4
-        col = i % 4
-        ax = axes[row, col]
-        
-        x_range = range(1, len(y_test) + 1)
-        
-        ax.plot(x_range, y_test, 'b-', label='Actual', linewidth=2)
-        ax.plot(x_range, [result['predictions'][j][0][0] for j in range(len(result['predictions']))], 
-                'r--', label='Predicted', linewidth=2)
-        
-        ax.set_title(f"Epochs: {result['epochs']}\nMSE: {result['mse']:.4f}, Error: {result['error_rate']:.1f}%", 
-                    fontsize=10, fontweight='bold')
-        ax.set_xlabel('Data Point #', fontsize=8)
-        ax.set_ylabel('Power (kW)', fontsize=8)
-        ax.legend(fontsize=8)
-        ax.grid(True, alpha=0.3)
-        ax.tick_params(labelsize=8)
-    
-    plt.tight_layout()
-    plt.show()
+        print(f"    MSE: {mse:.4f}, Error Rate: {error_rate:.2f}%")      # Plotting functionality removed - now handled by plot_refined_datasets.py
+    print(f"\n📊 Training completed! Visualization will be handled by plot_refined_datasets.py")
+    print(f"📁 Results saved for {len(results)} different epoch configurations")
     
     # Create summary table
     summary_data = []
@@ -595,91 +571,55 @@ def run_incremental_epoch_comparison():
         
         # Save results to CSV after each iteration
         save_epoch_results_to_csv(epochs, y_test, predictions, mse, error_rate, i == 1)  # header only on first iteration
-        
-        prev_epochs = epochs# Create 5x2 subplot visualization (10 plots total) with dynamic font scaling
-    fig, axes = plt.subplots(5, 2, figsize=(16, 20))
+      # Create 5x2 subplot visualization (10 plots total) removed - now handled by plot_refined_datasets.py
+    # All plotting functionality moved to plot_refined_datasets.py for better organization
     
-    # Calculate dynamic font sizes based on figure size
-    base_size = min(fig.get_figwidth(), fig.get_figheight())
-    title_font = max(8, int(base_size * 0.8))
-    subplot_title_font = max(6, int(base_size * 0.5))
-    label_font = max(5, int(base_size * 0.4))
-    legend_font = max(4, int(base_size * 0.35))
-    tick_font = max(4, int(base_size * 0.3))
+    print(f"\n📊 Training completed! Visualization will be handled by plot_refined_datasets.py")
+    print(f"📁 Results saved to CSV files in: {refined_datasets_dir}")
     
-    fig.suptitle('Incremental Epoch Comparison: 50-500 Epochs\nBOM Weather → House 4 Energy Prediction', 
-                fontsize=title_font, fontweight='bold')
-    
-    for i, result in enumerate(results):
-        row = i // 2
-        col = i % 2
-        ax = axes[row, col]
-        x_range = range(1, len(y_test) + 1)
-        ax.plot(x_range, y_test, 'b-', label='Actual', linewidth=2)
-        ax.plot(x_range, [result['predictions'][j][0][0] for j in range(len(result['predictions']))], 
-                'r--', label='Predicted', linewidth=2)
-        ax.set_title(f"Epochs: {result['epochs']}\nMSE: {result['mse']:.4f}, Error: {result['error_rate']:.1f}%", 
-                    fontsize=subplot_title_font, fontweight='bold')
-        ax.set_xlabel('Data Point #', fontsize=label_font)
-        ax.set_ylabel('Power (kW)', fontsize=label_font)
-        ax.legend(fontsize=legend_font)
-        ax.grid(True, alpha=0.3)
-        ax.tick_params(labelsize=tick_font)
-    
-    plt.tight_layout()
-    plt.show(block=False)  # Non-blocking display
-
-    # Create difference comparison plot (5x2 grid with 9 plots showing consecutive differences)
-    if len(results) > 1:
-        fig2, axes2 = plt.subplots(5, 2, figsize=(16, 20))
+    # Call the plotting script to handle all visualizations
+    try:
+        import subprocess
+        import sys
         
-        # Calculate dynamic font sizes for difference plot
-        diff_title_font = max(8, int(base_size * 0.8))
-        diff_subplot_title_font = max(6, int(base_size * 0.5))
-        diff_label_font = max(5, int(base_size * 0.4))
-        diff_legend_font = max(4, int(base_size * 0.35))
-        diff_tick_font = max(4, int(base_size * 0.3))
+        plot_script = os.path.join(os.path.dirname(__file__), 'plot_refined_datasets.py')
+        print(f"\n🎨 Launching visualization script: {plot_script}")
         
-        fig2.suptitle('Prediction Differences Between Consecutive Epochs\n(Current Epoch - Previous Epoch)',fontsize=diff_title_font, fontweight='bold')
+        # Run the plotting script in a separate process
+        result = subprocess.run([sys.executable, plot_script], capture_output=True, text=True)
         
-        # Calculate differences between consecutive epochs
-        for i in range(len(results) - 1):
-            row = i // 2
-            col = i % 2
-            ax = axes2[row, col]
+        if result.returncode == 0:
+            print("✅ Plotting script completed successfully!")
+        else:
+            print(f"⚠️  Plotting script had issues:")
+            print(f"   stdout: {result.stdout}")
+            print(f"   stderr: {result.stderr}")
             
-            # Get predictions for current and previous epoch
+    except Exception as e:
+        print(f"⚠️  Could not launch plotting script: {e}")
+        print("💡 You can run 'python plot_refined_datasets.py' manually to see visualizations")    # Difference comparison plotting removed - now handled by plot_refined_datasets.py
+    # All plotting functionality moved to plot_refined_datasets.py for better organization
+    
+    if len(results) > 1:
+        print(f"📊 Difference analysis data will be visualized by plot_refined_datasets.py")
+        print(f"📁 Difference data saved to: {os.path.join(refined_datasets_dir, 'epoch_differences_results.csv')}")
+        
+        # Save difference results to CSV for all consecutive epoch pairs
+        for i in range(len(results) - 1):
             current_pred = [results[i+1]['predictions'][j][0][0] for j in range(len(results[i+1]['predictions']))]
             previous_pred = [results[i]['predictions'][j][0][0] for j in range(len(results[i]['predictions']))]
-            
-            # Calculate difference (current - previous)
             prediction_diff = [current_pred[j] - previous_pred[j] for j in range(len(current_pred))]
-            
-            x_range = range(1, len(prediction_diff) + 1)
-            ax.plot(x_range, prediction_diff, 'g-', linewidth=2, label='Prediction Difference')
-            ax.axhline(y=0, color='k', linestyle='--', alpha=0.5)
-              # Calculate statistics
             mean_diff = np.mean(prediction_diff)
             std_diff = np.std(prediction_diff)
             
             # Save difference results to CSV
             save_difference_results_to_csv(results[i]['epochs'], results[i+1]['epochs'], 
                                           prediction_diff, mean_diff, std_diff, i == 0)  # header only on first iteration
-            
-            ax.set_title(f"Epochs {results[i]['epochs']} → {results[i+1]['epochs']}\nMean Δ: {mean_diff:.4f}, Std: {std_diff:.4f}", 
-                        fontsize=diff_subplot_title_font, fontweight='bold')
-            ax.set_xlabel('Data Point #', fontsize=diff_label_font)
-            ax.set_ylabel('Prediction Difference (kW)', fontsize=diff_label_font)
-            ax.legend(fontsize=diff_legend_font)
-            ax.grid(True, alpha=0.3)
-            ax.tick_params(labelsize=diff_tick_font)        # Hide the last subplot since we only have 9 difference plots
-        axes2[4, 1].set_visible(False)
         
-        plt.tight_layout()
-        plt.show(block=False)  # Non-blocking display
-          # Keep both plots open
-    print("\n📊 Both plots are now displayed simultaneously!")
-    print("💡 All plot windows will remain open. Close them manually when done.")
+        print(f"✅ All difference data saved for visualization")
+
+    print("\n📊 All training data saved to CSV files!")
+    print("💡 Run 'python plot_refined_datasets.py' to see all visualizations")
     
     # Create summary table
     summary_data = []
@@ -737,7 +677,7 @@ def check_gpu_status():
     print()
 
 def save_epoch_results_to_csv(epochs, y_test, predictions, mse, error_rate, write_header=False):
-    """Save epoch results to CSV file with proper formatting for plot_dat_files.py"""
+    """Save epoch results to CSV file with proper formatting for plot_refined_datasets.py"""
     # Get the script directory and refined datasets path
     script_dir = os.path.dirname(os.path.abspath(__file__))
     refined_datasets_dir = os.path.join(script_dir, 'Refined Datasets')

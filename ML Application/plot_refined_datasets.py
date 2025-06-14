@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 from datetime import datetime
-import seaborn as sns
 
 # Set up paths
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -280,7 +279,7 @@ def main():
     print("   2. Energy consumption analysis from .dat files") 
     print("   3. Weather-energy correlation analysis")
     print("   4. ML training results analysis from CSV files")
-    print("   5. ML training progression (same plots as in bom_to_house4_ml.py)")
+    print("   5. ML training progression (reproduces ML.py plots from CSV data)")
     print("   6. Prediction differences between epochs")
     print("   7. Actual vs predicted comparisons")
     print("="*60)
@@ -289,28 +288,31 @@ def main():
     bom_data, house4_data = load_dat_files()
     
     if bom_data is None or house4_data is None:
-        print("❌ Cannot proceed without data files. Run bom_to_house4_ml.py first!")
+        print("❌ Cannot proceed without data files. Run ML.py first!")
         return
     
     # Convert to DataFrames
     bom_df, house4_df = convert_to_dataframes(bom_data, house4_data)
-      # Print summary
+    
+    # Print summary
     print_data_summary(bom_df, house4_df)
     
     print("\n📈 Creating visualizations...")
     
-    # Create plots
+    # Create plots from .dat files
     plot_bom_weather_data(bom_df)
     plot_house4_energy_data(house4_df)
     plot_correlation_analysis(bom_df, house4_df)
-      # Try to load and display CSV files if they exist
+    
+    # Try to load and display CSV files if they exist
     plot_csv_results()
     
-    # Create new 5x2 grid plots for ML results
+    # Create new 5x2 grid plots for ML results (reproduces ML.py plots from CSV data)
     plot_actual_vs_predicted_5x2()
     plot_iteration_differences_5x2()
     plot_ml_training_results_5x2()
-    plot_ml_differences_5x2()    
+    plot_ml_differences_5x2()
+    
     print("\n✅ All visualizations completed!")
     print("📁 Data sources:")
     print("   • bom.dat / house4.dat (processed weather & energy data)")
@@ -320,7 +322,7 @@ def main():
     print("   • Weather data analysis (temperature, distributions, correlations)")
     print("   • Energy consumption patterns and trends")
     print("   • Weather-energy correlation analysis")
-    print("   • ML training progression (identical to bom_to_house4_ml.py plots)")
+    print("   • ML training progression (reproduces ML.py visualizations)")
     print("   • Prediction differences between training epochs")
     print("   • Actual vs predicted comparison grids")
     print("   • Statistical analysis and performance metrics")
