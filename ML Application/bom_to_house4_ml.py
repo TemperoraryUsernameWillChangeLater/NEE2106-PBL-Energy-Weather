@@ -157,10 +157,10 @@ def process_bom_data():
         
         if flag and len(data) == 4:  # Ensure we have all 4 temperature values
             bom[key] = data
-    
     print(f"BOM data processed: {len(bom)} valid records")
     
     #save the processed data to dat file
+    print(f"💾 Saving BOM data to: {bomfile}")
     with open(bomfile, 'wb') as file:
         pickle.dump(bom, file)
     
@@ -218,10 +218,10 @@ def process_house4_data():
     # Calculate average power for each time period
     for key in house4.keys():
         house4data_processed[key] = house4[key][0] / house4[key][1]  # save the average power
-    
     print(f"House 4 data processed: {len(house4data_processed)} valid records")
     
     #save house 4 processed data
+    print(f"💾 Saving House 4 data to: {house4file}")
     with open(house4file, 'wb') as file:
         pickle.dump(house4data_processed, file)
     
@@ -230,17 +230,22 @@ def process_house4_data():
 def load_processed_data():
     """Load processed data from dat files"""
     print("Loading processed data...")
+    print(f"📁 Looking for files in: {refined_datasets_dir}")
     
     # Check if processed files exist, if not create them
     if not os.path.exists(bomfile):
+        print("📊 Processing BOM data (file not found)...")
         bom = process_bom_data()
     else:
+        print(f"📖 Loading BOM data from: {bomfile}")
         with open(bomfile, 'rb') as file:
             bom = pickle.load(file)
     
     if not os.path.exists(house4file):
+        print("🏠 Processing House 4 data (file not found)...")
         house4data_processed = process_house4_data()
     else:
+        print(f"📖 Loading House 4 data from: {house4file}")
         with open(house4file, 'rb') as file:
             house4data_processed = pickle.load(file)
     
@@ -441,23 +446,6 @@ def calculate_errors(predicted_power, y_test):
     print(f"Mean absolute error: {np.mean(np.abs(error)):.4f} kW")
     
     return predicted_power_list, error, errorrate
-
-def plot_results(y_test, predicted_power):
-    """Graph the results"""
-    print("Creating visualization...")
-    
-    # graph the results
-    plt.figure(figsize=(12, 8))
-    
-    x = list(range(1, len(y_test) + 1))
-    plt.plot(x, y_test, label='Actual kW', linewidth=2)
-    plt.plot(x, [predicted_power[i][0][0] for i in range(len(predicted_power))], label='Predicted kW', linewidth=2)
-    plt.legend(("Actual kW", "Predicted kW"), loc="upper right")
-    plt.xlabel("# of data")
-    plt.ylabel("Power (kW)")
-    plt.title("Power Prediction - BOM Weather to House 4 Energy")
-    plt.grid(True, alpha=0.3)
-    plt.show()
 
 def save_results(y_test, predicted_power_list, error, errorrate):
     """Save results to CSV"""
@@ -815,6 +803,14 @@ def main():
     """Main function to run the complete ML application"""
     print("=== TensorFlow ML Application: BOM Weather → House 4 Energy Prediction ===")
     print("Using 4 temperature features (Min, Max, 9am, 3pm) to predict energy consumption")
+    print()
+    
+    # Display file organization
+    print("📁 File Organization:")
+    print(f"   • Input data: {datapath}")
+    print(f"   • Output data: {refined_datasets_dir}")
+    print(f"   • BOM processed data: {bomfile}")
+    print(f"   • House 4 processed data: {house4file}")
     print()
     
     # Display current configuration

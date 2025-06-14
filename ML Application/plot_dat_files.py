@@ -294,9 +294,12 @@ def main():
     plot_bom_weather_data(bom_df)
     plot_house4_energy_data(house4_df)
     plot_correlation_analysis(bom_df, house4_df)
-    
-    # Try to load and display CSV files if they exist
+      # Try to load and display CSV files if they exist
     plot_csv_results()
+    
+    # Create new 5x2 grid plots for ML results
+    plot_actual_vs_predicted_5x2()
+    plot_iteration_differences_5x2()
     
     print("\n✅ All visualizations completed!")
     print("📁 All files are saved in the Refined Datasets directory:")
@@ -441,6 +444,204 @@ def plot_epoch_differences(diff_df):
     
     plt.tight_layout()
     plt.show(block=False)
+
+def plot_actual_vs_predicted_5x2():
+    """Plot 5x2 grid of actual vs predicted values for each epoch"""
+    print("📊 Creating 5x2 Actual vs Predicted comparison plots...")
+    
+    results_file = os.path.join(refined_datasets_dir, 'incremental_epoch_results.csv')
+    if not os.path.exists(results_file):
+        print(f"❌ {results_file} not found! Run the ML script first.")
+        return
+    
+    # Load results data
+    results_df = pd.read_csv(results_file)
+    epochs = sorted(results_df['Epoch'].unique())
+    
+    # Create 5x2 subplot grid with automatic font scaling
+    fig, axes = plt.subplots(5, 2, figsize=(16, 20))
+    
+    # Dynamic font scaling based on figure size and subplot count
+    fig_width, fig_height = fig.get_size_inches()
+    base_font_size = min(fig_width, fig_height) / len(epochs) * 2.5  # Auto-scale based on content
+    title_font_size = base_font_size * 1.3
+    label_font_size = base_font_size * 0.9
+    legend_font_size = base_font_size * 0.7
+    
+    fig.suptitle('Actual vs Predicted Energy Consumption - Incremental Training Comparison', 
+                 fontweight='bold')  # Let matplotlib handle the size
+    
+    # Flatten axes for easier iteration
+    axes_flat = axes.flatten()
+    
+    # Plot each epoch's results
+    for i, epoch in enumerate(epochs):
+        if i >= 10:  # Only plot first 10 epochs (5x2 grid)
+            break
+            
+        epoch_data = results_df[results_df['Epoch'] == epoch]
+        
+        # Scatter plot: Actual vs Predicted
+        axes_flat[i].scatter(epoch_data['Actual_kW'], epoch_data['Predicted_kW'], 
+                           alpha=0.6, s=20, color='blue')
+        
+        # Perfect prediction line (y=x)
+        min_val = min(epoch_data['Actual_kW'].min(), epoch_data['Predicted_kW'].min())
+        max_val = max(epoch_data['Actual_kW'].max(), epoch_data['Predicted_kW'].max())
+        axes_flat[i].plot([min_val, max_val], [min_val, max_val], 
+                         'r--', linewidth=2, alpha=0.8, label='Perfect Prediction')
+        
+        # Calculate R² and MSE for the subplot
+        mse = epoch_data['MSE'].iloc[0]
+        correlation = np.corrcoef(epoch_data['Actual_kW'], epoch_data['Predicted_kW'])[0, 1]
+        r_squared = correlation ** 2
+        
+        axes_flat[i].set_title(f'Epoch {epoch}\nMSE: {mse:.4f}, R²: {r_squared:.3f}')
+        axes_flat[i].set_xlabel('Actual Energy (kW)')
+        axes_flat[i].set_ylabel('Predicted Energy (kW)')
+        axes_flat[i].grid(True, alpha=0.3)
+        axes_flat[i].legend()
+        
+        # Set equal aspect ratio for better comparison
+        axes_flat[i].set_aspect('equal', adjustable='box')
+    
+    # Hide unused subplots if there are fewer than 10 epochs
+    for i in range(len(epochs), 10):
+        axes_flat[i].set_visible(False)
+    
+    # Auto-adjust layout with dynamic spacing
+    plt.tight_layout()
+    plt.show(block=False)
+    print("✅ Actual vs Predicted 5x2 plot completed!")
+
+def plot_iteration_differences_5x2():
+    """Plot 5x2 grid (9 plots) showing differences between consecutive epoch iterations"""
+    print("📊 Creating 5x2 Iteration Differences comparison plots...")
+    
+    results_file = os.path.join(refined_datasets_dir, 'incremental_epoch_results.csv')
+    if not os.path.exists(results_file):
+        print(f"❌ {results_file} not found! Run the ML script first.")
+        return
+    
+    # Load results data
+    results_df = pd.read_csv(results_file)
+    epochs = sorted(results_df['Epoch'].unique())
+    
+    if len(epochs) < 2:
+        print("❌ Need at least 2 epochs to calculate differences!")
+        return
+    
+    # Create 5x2 subplot grid with matplotlib's auto-scaling
+    fig, axes = plt.subplots(5, 2, figsize=(16, 20))
+    fig.suptitle('Prediction Differences Between Consecutive Training Epochs', 
+                 fontweight='bold')  # No manual font size - let matplotlib decide
+    
+    # Flatten axes for easier iteration
+    axes_flat = axes.flatten()
+    
+    # Calculate and plot differences between consecutive epochs
+    plot_count = 0
+    for i in range(len(epochs) - 1):
+        if plot_count >= 9:  # Maximum 9 plots (leaving one subplot empty for legend/info)
+            break
+            
+        current_epoch = epochs[i]
+        next_epoch = epochs[i + 1]
+        
+        # Get data for both epochs
+        current_data = results_df[results_df['Epoch'] == current_epoch].sort_values('DataPoint')
+        next_data = results_df[results_df['Epoch'] == next_epoch].sort_values('DataPoint')
+        
+        # Calculate prediction differences
+        prediction_diff = next_data['Predicted_kW'].values - current_data['Predicted_kW'].values
+        data_points = current_data['DataPoint'].values
+        
+        # Create difference plot
+        colors = ['red' if diff > 0 else 'blue' for diff in prediction_diff]
+        axes_flat[plot_count].bar(data_points, prediction_diff, color=colors, alpha=0.7, width=0.8)
+        
+        # Statistics
+        mean_diff = np.mean(np.abs(prediction_diff))
+        max_diff = np.max(np.abs(prediction_diff))
+        
+        axes_flat[plot_count].set_title(f'Epoch {current_epoch} → {next_epoch}\n' +
+                                       f'Mean |Δ|: {mean_diff:.4f}, Max |Δ|: {max_diff:.4f}')
+        axes_flat[plot_count].set_xlabel('Data Point')
+        axes_flat[plot_count].set_ylabel('Prediction Difference (kW)')
+        axes_flat[plot_count].grid(True, alpha=0.3)
+        axes_flat[plot_count].axhline(y=0, color='black', linestyle='-', linewidth=1, alpha=0.5)
+        
+        plot_count += 1
+    
+    # Use the last subplot for summary information
+    if plot_count < 10:
+        summary_ax = axes_flat[9]  # Last subplot
+        summary_ax.axis('off')
+        
+        # Create summary text - let matplotlib auto-size the text
+        summary_text = "Summary of Iteration Differences:\n\n"
+        summary_text += "🔴 Red bars: Prediction increased\n"
+        summary_text += "🔵 Blue bars: Prediction decreased\n\n"
+        summary_text += "Interpretation:\n"
+        summary_text += "• Large differences indicate model learning\n"
+        summary_text += "• Small differences suggest convergence\n"
+        summary_text += "• Consistent patterns show stable learning\n\n"
+        
+        # Calculate overall statistics
+        all_diffs = []
+        for i in range(len(epochs) - 1):
+            current_data = results_df[results_df['Epoch'] == epochs[i]].sort_values('DataPoint')
+            next_data = results_df[results_df['Epoch'] == epochs[i + 1]].sort_values('DataPoint')
+            diff = next_data['Predicted_kW'].values - current_data['Predicted_kW'].values
+            all_diffs.extend(diff)
+        
+        summary_text += f"Overall Statistics:\n"
+        summary_text += f"Mean |Difference|: {np.mean(np.abs(all_diffs)):.4f} kW\n"
+        summary_text += f"Std Difference: {np.std(all_diffs):.4f} kW\n"
+        summary_text += f"Max |Difference|: {np.max(np.abs(all_diffs)):.4f} kW"
+        
+        summary_ax.text(0.05, 0.95, summary_text, transform=summary_ax.transAxes, 
+                       verticalalignment='top',  # No manual font size
+                       bbox=dict(boxstyle='round', facecolor='lightgray', alpha=0.8))
+    
+    # Hide unused subplots
+    for i in range(plot_count, 9):  # Hide subplots before the summary
+        axes_flat[i].set_visible(False)
+    
+    plt.tight_layout()
+    plt.show(block=False)
+    print("✅ Iteration Differences 5x2 plot completed!")
+
+# ====================
+# DYNAMIC FONT SCALING UTILITIES
+# ====================
+
+def set_dynamic_font_params(num_subplots=1, figure_size=(12, 8)):
+    """
+    Configure matplotlib to use dynamic font scaling based on figure complexity
+    
+    Args:
+        num_subplots: Number of subplots in the figure
+        figure_size: Tuple of (width, height) in inches
+    """
+    # Calculate scaling factors
+    subplot_density = num_subplots / (figure_size[0] * figure_size[1])
+    base_scale = min(figure_size) / 10  # Base scaling factor
+    
+    # Set matplotlib rcParams for dynamic scaling
+    plt.rcParams.update({
+        'font.size': max(8, int(12 * base_scale / max(1, subplot_density))),
+        'axes.titlesize': max(10, int(14 * base_scale / max(1, subplot_density))),
+        'axes.labelsize': max(8, int(11 * base_scale / max(1, subplot_density))),
+        'xtick.labelsize': max(7, int(9 * base_scale / max(1, subplot_density))),
+        'ytick.labelsize': max(7, int(9 * base_scale / max(1, subplot_density))),
+        'legend.fontsize': max(6, int(8 * base_scale / max(1, subplot_density))),
+        'figure.titlesize': max(12, int(16 * base_scale / max(1, subplot_density)))
+    })
+
+def reset_font_params():
+    """Reset matplotlib font parameters to defaults"""
+    plt.rcParams.update(plt.rcParamsDefault)
 
 if __name__ == "__main__":
     main()
