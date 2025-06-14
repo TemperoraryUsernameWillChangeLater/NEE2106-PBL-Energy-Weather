@@ -572,6 +572,75 @@ def run_epoch_comparison():
     print(f"   • Results show {improvement:.1f}% improvement from worst to best")
     print(f"   • Beyond optimal point, more epochs may lead to overfitting")
 
+def run_incremental_epoch_comparison():
+    """Train a single model incrementally: 50, 100, ..., 500 epochs, storing results after each increment, and plot a 5x2 grid."""
+    print("=== Incremental Epoch Comparison Study ===")
+    print("Training a single model, continuing for 50, 100, ..., 500 epochs (total 500 epochs)\n")
+
+    # Load data
+    bom, house4data_processed = load_processed_data()
+    x_train_full, y_train_full = generate_training_data(bom, house4data_processed)
+    x_train, x_test, y_train, y_test = create_train_test_split(x_train_full, y_train_full)
+
+    # Epoch increments
+    epoch_tests = list(range(50, 501, 50))  # [50, 100, ..., 500]
+    results = []    # Create and train model incrementally
+    model = create_rnn_model()
+    prev_epochs = 0
+    for i, epochs in enumerate(epoch_tests, 1):
+        print(f"[{i}/{len(epoch_tests)}] Training up to {epochs} epochs (from {prev_epochs})...")
+        history = model.fit(x_train, y_train, batch_size=1, initial_epoch=prev_epochs, epochs=epochs, verbose=1)
+        # Evaluate
+        mse = model.evaluate(x_test, y_test, verbose=0)
+        predictions = model.predict(x_test, verbose=0)
+        # Calculate error rate
+        errors = [predictions[j][0][0] - y_test[j] for j in range(len(predictions))]
+        error_rate = np.mean(np.abs(errors)) / np.mean(y_test) * 100
+        results.append({
+            'epochs': epochs,
+            'mse': mse,
+            'error_rate': error_rate,
+            'predictions': predictions
+        })
+        print(f"    MSE: {mse:.4f}, Error Rate: {error_rate:.2f}%")
+        prev_epochs = epochs
+
+    # Create 5x2 subplot visualization (10 plots total)
+    fig, axes = plt.subplots(5, 2, figsize=(16, 20))
+    fig.suptitle('Incremental Epoch Comparison: 50-500 Epochs\nBOM Weather → House 4 Energy Prediction', fontsize=16, fontweight='bold')
+    for i, result in enumerate(results):
+        row = i // 2
+        col = i % 2
+        ax = axes[row, col]
+        x_range = range(1, len(y_test) + 1)
+        ax.plot(x_range, y_test, 'b-', label='Actual', linewidth=2)
+        ax.plot(x_range, [result['predictions'][j][0][0] for j in range(len(result['predictions']))], 
+                'r--', label='Predicted', linewidth=2)
+        ax.set_title(f"Epochs: {result['epochs']}\nMSE: {result['mse']:.4f}, Error: {result['error_rate']:.1f}%", 
+                    fontsize=10, fontweight='bold')
+        ax.set_xlabel('Data Point #', fontsize=8)
+        ax.set_ylabel('Power (kW)', fontsize=8)
+        ax.legend(fontsize=8)
+        ax.grid(True, alpha=0.3)
+        ax.tick_params(labelsize=8)
+    plt.tight_layout()
+    plt.savefig(os.path.join(script_dir, 'incremental_epoch_comparison_5x2_grid.png'), dpi=300, bbox_inches='tight')
+    plt.show()
+
+    # Create summary table
+    summary_data = []
+    for result in results:
+        summary_data.append({
+            'Epochs': result['epochs'],
+            'MSE': result['mse'],
+            'Error_Rate_%': result['error_rate']
+        })
+    summary_df = pd.DataFrame(summary_data)
+    summary_file = os.path.join(script_dir, 'incremental_epoch_comparison_summary.csv')
+    summary_df.to_csv(summary_file, index=False)
+    print(f"\nSummary saved to: {summary_file}")
+    print(f"5x2 visualization saved to: incremental_epoch_comparison_5x2_grid.png")
+
 def check_gpu_status():
     """Check if TensorFlow can use GPU"""
     print("🔧 GPU Configuration Check:")
@@ -625,61 +694,12 @@ def main():
         gpus = tf.config.list_physical_devices('GPU')
         print(f"   • GPU device: {gpus[0].name}")
     print()
-    
-    # Check GPU status
+      # Check GPU status
     check_gpu_status()
     
-    # Ask user for epoch count
+    # Run incremental epoch comparison automatically
     try:
-        epoch_input = input("Enter number of epochs (default 30, or 'test' for comparison): ")
-        if epoch_input.lower() == 'test':
-            run_epoch_comparison()
-            return
-        elif epoch_input.strip() == '':
-            epochs = 30
-        else:
-            epochs = int(epoch_input)
-    except ValueError:
-        epochs = 30
-        
-    print(f"Training with {epochs} epochs...\n")
-    
-    try:
-        # Step 1: Load and process data
-        bom, house4data_processed = load_processed_data()
-        
-        if len(bom) == 0 or len(house4data_processed) == 0:
-            print("Error: No data could be processed!")
-            return
-        
-        # Step 2: Generate training data
-        x_train_full, y_train_full = generate_training_data(bom, house4data_processed)
-        
-        if len(x_train_full) == 0:
-            print("Error: No overlapping data found!")
-            return
-        
-        # Step 3: Create train/test split
-        x_train, x_test, y_train, y_test = create_train_test_split(x_train_full, y_train_full)
-        
-        # Step 4: Create RNN model
-        model = create_rnn_model()
-        
-        # Step 5: Train the model
-        history = train_model(model, x_train, y_train, epochs)
-        
-        # Step 6: Evaluate and predict
-        predicted_power = evaluate_and_predict(model, x_test, y_test)
-        
-        # Step 7: Calculate errors
-        predicted_power_list, error, errorrate = calculate_errors(predicted_power, y_test)
-        
-        # Step 8: Create visualization
-        plot_results(y_test, predicted_power)
-        
-        # Step 9: Save results
-        save_results(y_test, predicted_power_list, error, errorrate)
-        
+        run_incremental_epoch_comparison()
         print("\n=== ML Application Completed Successfully ===")
         
     except Exception as e:
