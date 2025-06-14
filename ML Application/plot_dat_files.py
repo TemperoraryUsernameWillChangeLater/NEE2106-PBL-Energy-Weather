@@ -273,8 +273,17 @@ def print_data_summary(bom_df, house4_df):
 
 def main():
     """Main function to run all plotting functions"""
-    print("🔍 DAT FILE VISUALIZATION TOOL")
-    print("="*50)
+    print("🔍 COMPREHENSIVE DATA VISUALIZATION TOOL")
+    print("="*60)
+    print("📊 This script creates multiple visualization sets:")
+    print("   1. Weather data analysis from .dat files")
+    print("   2. Energy consumption analysis from .dat files") 
+    print("   3. Weather-energy correlation analysis")
+    print("   4. ML training results analysis from CSV files")
+    print("   5. ML training progression (same plots as in bom_to_house4_ml.py)")
+    print("   6. Prediction differences between epochs")
+    print("   7. Actual vs predicted comparisons")
+    print("="*60)
     
     # Load data from .dat files
     bom_data, house4_data = load_dat_files()
@@ -300,12 +309,21 @@ def main():
     # Create new 5x2 grid plots for ML results
     plot_actual_vs_predicted_5x2()
     plot_iteration_differences_5x2()
-    
+    plot_ml_training_results_5x2()
+    plot_ml_differences_5x2()    
     print("\n✅ All visualizations completed!")
-    print("📁 All files are saved in the Refined Datasets directory:")
-    print("   • bom.dat / house4.dat (processed data)")
-    print("   • incremental_epoch_results.csv (if available)")
-    print("   • epoch_differences_results.csv (if available)")
+    print("📁 Data sources:")
+    print("   • bom.dat / house4.dat (processed weather & energy data)")
+    print("   • incremental_epoch_results.csv (ML training results)")
+    print("   • epoch_differences_results.csv (epoch comparison data)")
+    print("\n📊 Generated plot types:")
+    print("   • Weather data analysis (temperature, distributions, correlations)")
+    print("   • Energy consumption patterns and trends")
+    print("   • Weather-energy correlation analysis")
+    print("   • ML training progression (identical to bom_to_house4_ml.py plots)")
+    print("   • Prediction differences between training epochs")
+    print("   • Actual vs predicted comparison grids")
+    print("   • Statistical analysis and performance metrics")
     
     # Keep all plot windows open
     print("\n📊 All plots are now displayed simultaneously!")
@@ -458,15 +476,8 @@ def plot_actual_vs_predicted_5x2():
     results_df = pd.read_csv(results_file)
     epochs = sorted(results_df['Epoch'].unique())
     
-    # Create 5x2 subplot grid with automatic font scaling
+    # Create 5x2 subplot grid with automatic font scaling    # Create 5x2 subplot grid with automatic font scaling
     fig, axes = plt.subplots(5, 2, figsize=(16, 20))
-    
-    # Dynamic font scaling based on figure size and subplot count
-    fig_width, fig_height = fig.get_size_inches()
-    base_font_size = min(fig_width, fig_height) / len(epochs) * 2.5  # Auto-scale based on content
-    title_font_size = base_font_size * 1.3
-    label_font_size = base_font_size * 0.9
-    legend_font_size = base_font_size * 0.7
     
     fig.suptitle('Actual vs Predicted Energy Consumption - Incremental Training Comparison', 
                  fontweight='bold')  # Let matplotlib handle the size
@@ -612,9 +623,179 @@ def plot_iteration_differences_5x2():
     plt.show(block=False)
     print("✅ Iteration Differences 5x2 plot completed!")
 
+def plot_ml_training_results_5x2():
+    """Recreate the ML training 5x2 grid plots using CSV data"""
+    print("📊 Creating ML Training Results 5x2 plots from CSV data...")
+    
+    results_file = os.path.join(refined_datasets_dir, 'incremental_epoch_results.csv')
+    if not os.path.exists(results_file):
+        print(f"❌ {results_file} not found! Run the ML script first.")
+        return
+    
+    # Load results data
+    results_df = pd.read_csv(results_file)
+    epochs = sorted(results_df['Epoch'].unique())
+    
+    if len(epochs) == 0:
+        print("❌ No epoch data found in CSV file!")
+        return
+      # Set dynamic font scaling for this figure (10 subplots, 16x20 size)
+    set_dynamic_font_params(num_subplots=10, figure_size=(16, 20))
+    
+    # Create 5x2 subplot grid
+    fig, axes = plt.subplots(5, 2, figsize=(16, 20))
+    
+    # Calculate dynamic font sizes
+    fonts = calculate_dynamic_font_sizes(fig.get_size_inches())
+    
+    fig.suptitle('Incremental Epoch Comparison: ML Training Results\nBOM Weather → House 4 Energy Prediction (from CSV)', 
+                fontsize=fonts['title'], fontweight='bold')
+    
+    # Plot each epoch's results
+    for i, epoch in enumerate(epochs):
+        if i >= 10:  # Only plot first 10 epochs (5x2 grid)
+            break
+            
+        row = i // 2
+        col = i % 2
+        ax = axes[row, col]
+        
+        # Get data for this epoch
+        epoch_data = results_df[results_df['Epoch'] == epoch].sort_values('DataPoint')
+        
+        x_range = range(1, len(epoch_data) + 1)
+        ax.plot(x_range, epoch_data['Actual_kW'], 'b-', label='Actual', linewidth=2)
+        ax.plot(x_range, epoch_data['Predicted_kW'], 'r--', label='Predicted', linewidth=2)
+          # Get statistics
+        mse = epoch_data['MSE'].iloc[0]
+        error_rate = epoch_data['Error_Rate_%'].iloc[0]
+        
+        ax.set_title(f"Epochs: {epoch}\nMSE: {mse:.4f}, Error: {error_rate:.1f}%", 
+                    fontsize=fonts['subtitle'], fontweight='bold')
+        ax.set_xlabel('Data Point #', fontsize=fonts['label'])
+        ax.set_ylabel('Power (kW)', fontsize=fonts['label'])
+        ax.legend(fontsize=fonts['legend'])
+        ax.grid(True, alpha=0.3)
+        ax.tick_params(labelsize=fonts['tick'])
+    
+    # Hide unused subplots if there are fewer than 10 epochs
+    for i in range(len(epochs), 10):
+        row = i // 2
+        col = i % 2
+        axes[row, col].set_visible(False)
+    
+    plt.tight_layout()
+    plt.show(block=False)
+    
+    # Reset font parameters
+    reset_font_params()
+    
+    print("✅ ML Training Results 5x2 plot completed!")
+
+def plot_ml_differences_5x2():
+    """Recreate the ML training differences 5x2 grid plots using CSV data"""
+    print("📊 Creating ML Training Differences 5x2 plots from CSV data...")
+    
+    results_file = os.path.join(refined_datasets_dir, 'incremental_epoch_results.csv')
+    if not os.path.exists(results_file):
+        print(f"❌ {results_file} not found! Run the ML script first.")
+        return
+    
+    # Load results data
+    results_df = pd.read_csv(results_file)
+    epochs = sorted(results_df['Epoch'].unique())
+    
+    if len(epochs) < 2:
+        print("❌ Need at least 2 epochs to calculate differences!")
+        return
+      # Set dynamic font scaling for this figure (9 subplots, 16x20 size)
+    set_dynamic_font_params(num_subplots=9, figure_size=(16, 20))
+    
+    # Create 5x2 subplot grid
+    fig, axes = plt.subplots(5, 2, figsize=(16, 20))
+    
+    # Calculate dynamic font sizes
+    fonts = calculate_dynamic_font_sizes(fig.get_size_inches())
+    
+    fig.suptitle('Prediction Differences Between Consecutive Epochs\n(Current Epoch - Previous Epoch) from CSV',
+                fontsize=fonts['title'], fontweight='bold')
+    
+    # Calculate differences between consecutive epochs
+    plot_count = 0
+    for i in range(len(epochs) - 1):
+        if plot_count >= 9:  # Maximum 9 plots
+            break
+            
+        row = plot_count // 2
+        col = plot_count % 2
+        ax = axes[row, col]
+        
+        current_epoch = epochs[i + 1]
+        previous_epoch = epochs[i]
+        
+        # Get data for both epochs
+        current_data = results_df[results_df['Epoch'] == current_epoch].sort_values('DataPoint')
+        previous_data = results_df[results_df['Epoch'] == previous_epoch].sort_values('DataPoint')
+          # Calculate prediction differences
+        prediction_diff = current_data['Predicted_kW'].values - previous_data['Predicted_kW'].values
+        
+        x_range = range(1, len(prediction_diff) + 1)
+        ax.plot(x_range, prediction_diff, 'g-', linewidth=2, label='Prediction Difference')
+        ax.axhline(y=0, color='k', linestyle='--', alpha=0.5)
+        
+        # Calculate statistics
+        mean_diff = np.mean(prediction_diff)
+        std_diff = np.std(prediction_diff)
+        
+        ax.set_title(f"Epochs {previous_epoch} → {current_epoch}\nMean Δ: {mean_diff:.4f}, Std: {std_diff:.4f}", 
+                    fontsize=fonts['subtitle'], fontweight='bold')
+        ax.set_xlabel('Data Point #', fontsize=fonts['label'])
+        ax.set_ylabel('Prediction Difference (kW)', fontsize=fonts['label'])
+        ax.legend(fontsize=fonts['legend'])
+        ax.grid(True, alpha=0.3)
+        ax.tick_params(labelsize=fonts['tick'])
+        
+        plot_count += 1
+    
+    # Hide the last subplot since we only have 9 difference plots
+    axes[4, 1].set_visible(False)
+    
+    # Hide any other unused subplots
+    for i in range(plot_count, 9):
+        row = i // 2
+        col = i % 2
+        axes[row, col].set_visible(False)
+    
+    plt.tight_layout()
+    plt.show(block=False)
+    
+    # Reset font parameters
+    reset_font_params()
+    
+    print("✅ ML Training Differences 5x2 plot completed!")
+
 # ====================
 # DYNAMIC FONT SCALING UTILITIES
 # ====================
+
+def calculate_dynamic_font_sizes(figure_size):
+    """
+    Calculate dynamic font sizes based on figure dimensions
+    
+    Args:
+        figure_size: Tuple of (width, height) in inches
+    
+    Returns:
+        dict: Dictionary of font sizes for different elements
+    """
+    base_size = min(figure_size)
+    return {
+        'title': max(8, int(base_size * 0.8)),
+        'subtitle': max(6, int(base_size * 0.5)),
+        'label': max(5, int(base_size * 0.4)),
+        'legend': max(4, int(base_size * 0.35)),
+        'tick': max(4, int(base_size * 0.3))
+    }
 
 def set_dynamic_font_params(num_subplots=1, figure_size=(12, 8)):
     """
