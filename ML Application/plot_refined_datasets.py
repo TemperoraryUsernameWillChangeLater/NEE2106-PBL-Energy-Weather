@@ -100,97 +100,152 @@ def convert_to_dataframes(bom_data, house4_data):
     return bom_df, house4_df
 
 def plot_bom_weather_data(bom_df):
-    """Plot BOM weather data"""
+    """Plot BOM weather data with A4-vertical layout"""
     print("Creating BOM weather plots...")
     
-    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-    fig.suptitle('BOM Weather Data Analysis', fontsize=16, fontweight='bold')
-    
-    # Temperature trends over time
+    # More vertical layout for A4 compatibility (3 rows, 2 columns)
+    fig, axes = plt.subplots(3, 2, figsize=(8.5, 12))  # A4-like proportions
+    fig.suptitle('BOM Weather Data Analysis', fontsize=14, fontweight='bold')
+      # Temperature trends over time
     axes[0, 0].plot(bom_df['Date'], bom_df['MinTemp'], 'b-', label='Min Temp', alpha=0.7)
     axes[0, 0].plot(bom_df['Date'], bom_df['MaxTemp'], 'r-', label='Max Temp', alpha=0.7)
     axes[0, 0].plot(bom_df['Date'], bom_df['AvgTemp'], 'g-', label='Avg Temp', linewidth=2)
-    axes[0, 0].set_title('Temperature Trends Over Time')
+    axes[0, 0].set_title('Temperature Trends Over Time', fontsize=12)
     axes[0, 0].set_xlabel('Date')
     axes[0, 0].set_ylabel('Temperature (°C)')
-    axes[0, 0].legend()
+    axes[0, 0].legend(fontsize=9)
     axes[0, 0].grid(True, alpha=0.3)
+    axes[0, 0].tick_params(axis='x', rotation=45)
     
     # Temperature distribution
     axes[0, 1].hist(bom_df['MinTemp'], bins=30, alpha=0.7, label='Min Temp', color='blue')
     axes[0, 1].hist(bom_df['MaxTemp'], bins=30, alpha=0.7, label='Max Temp', color='red')
-    axes[0, 1].set_title('Temperature Distribution')
+    axes[0, 1].set_title('Temperature Distribution', fontsize=12)
     axes[0, 1].set_xlabel('Temperature (°C)')
     axes[0, 1].set_ylabel('Frequency')
-    axes[0, 1].legend()
+    axes[0, 1].legend(fontsize=9)
     axes[0, 1].grid(True, alpha=0.3)
-    
-    # Daily temperature range
+      # Daily temperature range
     bom_df['TempRange'] = bom_df['MaxTemp'] - bom_df['MinTemp']
     axes[1, 0].plot(bom_df['Date'], bom_df['TempRange'], 'purple', alpha=0.7)
-    axes[1, 0].set_title('Daily Temperature Range')
+    axes[1, 0].set_title('Daily Temperature Range', fontsize=12)
     axes[1, 0].set_xlabel('Date')
     axes[1, 0].set_ylabel('Temperature Range (°C)')
     axes[1, 0].grid(True, alpha=0.3)
+    axes[1, 0].tick_params(axis='x', rotation=45)
     
     # 9am vs 3pm temperatures
     axes[1, 1].scatter(bom_df['Temp9am'], bom_df['Temp3pm'], alpha=0.6, color='orange')
     axes[1, 1].plot([bom_df['Temp9am'].min(), bom_df['Temp9am'].max()], 
                     [bom_df['Temp9am'].min(), bom_df['Temp9am'].max()], 'k--', alpha=0.5)
-    axes[1, 1].set_title('9am vs 3pm Temperature Correlation')
+    axes[1, 1].set_title('9am vs 3pm Temperature Correlation', fontsize=12)
     axes[1, 1].set_xlabel('9am Temperature (°C)')
     axes[1, 1].set_ylabel('3pm Temperature (°C)')
     axes[1, 1].grid(True, alpha=0.3)
+    
+    # Monthly temperature averages
+    bom_df['Month'] = bom_df['Date'].dt.month
+    monthly_temp = bom_df.groupby('Month')[['MinTemp', 'MaxTemp', 'AvgTemp']].mean()
+    axes[2, 0].plot(monthly_temp.index, monthly_temp['MinTemp'], 'b-o', label='Min Temp')
+    axes[2, 0].plot(monthly_temp.index, monthly_temp['MaxTemp'], 'r-o', label='Max Temp') 
+    axes[2, 0].plot(monthly_temp.index, monthly_temp['AvgTemp'], 'g-o', label='Avg Temp')
+    axes[2, 0].set_title('Monthly Temperature Averages', fontsize=12)
+    axes[2, 0].set_xlabel('Month')
+    axes[2, 0].set_ylabel('Temperature (°C)')
+    axes[2, 0].legend(fontsize=9)
+    axes[2, 0].grid(True, alpha=0.3)
+    
+    # Temperature variability by month
+    monthly_std = bom_df.groupby('Month')['AvgTemp'].std()
+    axes[2, 1].bar(monthly_std.index, monthly_std.values, alpha=0.7, color='teal')
+    axes[2, 1].set_title('Temperature Variability by Month', fontsize=12)
+    axes[2, 1].set_xlabel('Month')
+    axes[2, 1].set_ylabel('Temperature Std Dev (°C)')
+    axes[2, 1].grid(True, alpha=0.3)
     
     plt.tight_layout()
     plt.show(block=False)
 
 def plot_house4_energy_data(house4_df):
-    """Plot House 4 energy consumption data"""
+    """Plot House 4 energy consumption data with A4-vertical layout"""
     print("Creating House 4 energy plots...")
     
-    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-    fig.suptitle('House 4 Energy Consumption Analysis', fontsize=16, fontweight='bold')
-    
-    # Energy consumption over time
+    # More vertical layout for A4 compatibility (3 rows, 2 columns)
+    fig, axes = plt.subplots(3, 2, figsize=(8.5, 12))  # A4-like proportions
+    fig.suptitle('House 4 Energy Consumption Analysis', fontsize=14, fontweight='bold')
+      # Energy consumption over time
     axes[0, 0].plot(house4_df['DateTime'], house4_df['Power_kW'], 'b-', alpha=0.7, linewidth=0.5)
-    axes[0, 0].set_title('Energy Consumption Over Time')
+    axes[0, 0].set_title('Energy Consumption Over Time', fontsize=12)
     axes[0, 0].set_xlabel('Date/Time')
     axes[0, 0].set_ylabel('Power (kW)')
     axes[0, 0].grid(True, alpha=0.3)
+    axes[0, 0].tick_params(axis='x', rotation=45)
     
     # Power distribution
     axes[0, 1].hist(house4_df['Power_kW'], bins=50, alpha=0.7, color='green')
-    axes[0, 1].set_title('Power Consumption Distribution')
+    axes[0, 1].set_title('Power Consumption Distribution', fontsize=12)
     axes[0, 1].set_xlabel('Power (kW)')
     axes[0, 1].set_ylabel('Frequency')
     axes[0, 1].grid(True, alpha=0.3)
-    
-    # Daily average consumption
+      # Daily average consumption
     house4_df['Date'] = house4_df['DateTime'].dt.date
     daily_avg = house4_df.groupby('Date')['Power_kW'].mean().reset_index()
     daily_avg['Date'] = pd.to_datetime(daily_avg['Date'])
     
     axes[1, 0].plot(daily_avg['Date'], daily_avg['Power_kW'], 'r-', linewidth=2)
-    axes[1, 0].set_title('Daily Average Power Consumption')
+    axes[1, 0].set_title('Daily Average Power Consumption', fontsize=12)
     axes[1, 0].set_xlabel('Date')
     axes[1, 0].set_ylabel('Average Power (kW)')
     axes[1, 0].grid(True, alpha=0.3)
-      # Hourly consumption pattern
-    house4_df['Hour'] = house4_df['DateTime'].dt.hour
-    hourly_avg = house4_df.groupby('Hour')['Power_kW'].mean()
+    axes[1, 0].tick_params(axis='x', rotation=45)
     
-    axes[1, 1].bar(hourly_avg.index, hourly_avg.values, alpha=0.7, color='orange')
-    axes[1, 1].set_title('Average Hourly Power Consumption')
-    axes[1, 1].set_xlabel('Hour of Day')
-    axes[1, 1].set_ylabel('Average Power (kW)')
+    # Daily power consumption change (day-to-day difference)
+    house4_df['Date'] = house4_df['DateTime'].dt.date
+    daily_avg = house4_df.groupby('Date')['Power_kW'].mean().reset_index()
+    daily_avg['Date'] = pd.to_datetime(daily_avg['Date'])
+    daily_avg = daily_avg.sort_values('Date')
+    
+    # Calculate day-to-day change
+    daily_avg['Daily_Change'] = daily_avg['Power_kW'].diff()
+    
+    # Create bar chart with positive changes in green, negative in red
+    colors = ['red' if x < 0 else 'green' for x in daily_avg['Daily_Change'].fillna(0)]
+    axes[1, 1].bar(range(len(daily_avg)), daily_avg['Daily_Change'].fillna(0), 
+                   alpha=0.7, color=colors, width=0.8)
+    axes[1, 1].set_title('Daily Power Consumption Change', fontsize=12)
+    axes[1, 1].set_xlabel('Days (Sequential)')
+    axes[1, 1].set_ylabel('Power Change (kW)')
+    axes[1, 1].axhline(y=0, color='black', linestyle='-', alpha=0.5)
     axes[1, 1].grid(True, alpha=0.3)
+    
+    # Weekly consumption pattern
+    house4_df['Weekday'] = house4_df['DateTime'].dt.dayofweek
+    weekday_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    weekly_avg = house4_df.groupby('Weekday')['Power_kW'].mean()
+    
+    axes[2, 0].bar(range(7), weekly_avg.values, alpha=0.7, color='purple')
+    axes[2, 0].set_title('Average Power by Day of Week', fontsize=12)
+    axes[2, 0].set_xlabel('Day of Week')
+    axes[2, 0].set_ylabel('Average Power (kW)')
+    axes[2, 0].set_xticks(range(7))
+    axes[2, 0].set_xticklabels(weekday_names)
+    axes[2, 0].grid(True, alpha=0.3)
+    
+    # Monthly consumption pattern
+    house4_df['Month'] = house4_df['DateTime'].dt.month
+    monthly_avg = house4_df.groupby('Month')['Power_kW'].mean()
+    
+    axes[2, 1].plot(monthly_avg.index, monthly_avg.values, 'mo-', linewidth=2, markersize=6)
+    axes[2, 1].set_title('Average Power by Month', fontsize=12)
+    axes[2, 1].set_xlabel('Month')
+    axes[2, 1].set_ylabel('Average Power (kW)')
+    axes[2, 1].grid(True, alpha=0.3)
     
     plt.tight_layout()
     plt.show(block=False)
 
 def plot_correlation_analysis(bom_df, house4_df):
-    """Plot correlation between weather and energy data"""
+    """Plot correlation between weather and energy data with A4-vertical layout"""
     print("Creating correlation analysis...")
     
     # Merge data on date
@@ -210,43 +265,61 @@ def plot_correlation_analysis(bom_df, house4_df):
     
     print(f"✅ Found {len(merged_df)} matching date records")
     
-    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-    fig.suptitle('Weather vs Energy Consumption Correlation Analysis', fontsize=16, fontweight='bold')
+    # More vertical layout for A4 compatibility (3 rows, 2 columns)
+    fig, axes = plt.subplots(3, 2, figsize=(8.5, 12))  # A4-like proportions
+    fig.suptitle('Weather vs Energy Consumption Correlation Analysis', fontsize=14, fontweight='bold')
     
     # Temperature vs Power scatter plots
     axes[0, 0].scatter(merged_df['MinTemp'], merged_df['DailyAvgPower'], alpha=0.6, color='blue')
-    axes[0, 0].set_title('Min Temperature vs Daily Average Power')
+    axes[0, 0].set_title('Min Temperature vs Daily Avg Power', fontsize=12)
     axes[0, 0].set_xlabel('Min Temperature (°C)')
     axes[0, 0].set_ylabel('Daily Avg Power (kW)')
     axes[0, 0].grid(True, alpha=0.3)
     
     axes[0, 1].scatter(merged_df['MaxTemp'], merged_df['DailyAvgPower'], alpha=0.6, color='red')
-    axes[0, 1].set_title('Max Temperature vs Daily Average Power')
+    axes[0, 1].set_title('Max Temperature vs Daily Avg Power', fontsize=12)
     axes[0, 1].set_xlabel('Max Temperature (°C)')
     axes[0, 1].set_ylabel('Daily Avg Power (kW)')
     axes[0, 1].grid(True, alpha=0.3)
     
     axes[1, 0].scatter(merged_df['AvgTemp'], merged_df['DailyAvgPower'], alpha=0.6, color='green')
-    axes[1, 0].set_title('Average Temperature vs Daily Average Power')
+    axes[1, 0].set_title('Average Temperature vs Daily Avg Power', fontsize=12)
     axes[1, 0].set_xlabel('Average Temperature (°C)')
     axes[1, 0].set_ylabel('Daily Avg Power (kW)')
     axes[1, 0].grid(True, alpha=0.3)
     
+    # 9am and 3pm temperature vs power
+    axes[1, 1].scatter(merged_df['Temp9am'], merged_df['DailyAvgPower'], alpha=0.6, color='orange', label='9am Temp')
+    axes[1, 1].scatter(merged_df['Temp3pm'], merged_df['DailyAvgPower'], alpha=0.6, color='purple', label='3pm Temp')
+    axes[1, 1].set_title('9am & 3pm Temperature vs Power', fontsize=12)
+    axes[1, 1].set_xlabel('Temperature (°C)')
+    axes[1, 1].set_ylabel('Daily Avg Power (kW)')
+    axes[1, 1].legend(fontsize=9)
+    axes[1, 1].grid(True, alpha=0.3)
+    
     # Correlation heatmap
     corr_data = merged_df[['MinTemp', 'MaxTemp', 'Temp9am', 'Temp3pm', 'AvgTemp', 'DailyAvgPower']].corr()
-    im = axes[1, 1].imshow(corr_data.values, cmap='coolwarm', vmin=-1, vmax=1)
-    axes[1, 1].set_xticks(range(len(corr_data.columns)))
-    axes[1, 1].set_yticks(range(len(corr_data.columns)))
-    axes[1, 1].set_xticklabels(corr_data.columns, rotation=45)
-    axes[1, 1].set_yticklabels(corr_data.columns)
-    axes[1, 1].set_title('Correlation Matrix')
-      # Add correlation values to heatmap
+    im = axes[2, 0].imshow(corr_data.values, cmap='coolwarm', vmin=-1, vmax=1)
+    axes[2, 0].set_xticks(range(len(corr_data.columns)))
+    axes[2, 0].set_yticks(range(len(corr_data.columns)))
+    axes[2, 0].set_xticklabels(corr_data.columns, rotation=45, fontsize=9)
+    axes[2, 0].set_yticklabels(corr_data.columns, fontsize=9)
+    axes[2, 0].set_title('Correlation Matrix', fontsize=12)
+    # Add correlation values to heatmap
     for i in range(len(corr_data.columns)):
         for j in range(len(corr_data.columns)):
-            axes[1, 1].text(j, i, f'{corr_data.iloc[i, j]:.2f}', 
-                           ha='center', va='center', color='black', fontsize=8)
+            axes[2, 0].text(j, i, f'{corr_data.iloc[i, j]:.2f}', 
+                           ha='center', va='center', color='black', fontsize=7)
     
-    plt.colorbar(im, ax=axes[1, 1])
+    # Temperature range vs power
+    merged_df['TempRange'] = merged_df['MaxTemp'] - merged_df['MinTemp']
+    axes[2, 1].scatter(merged_df['TempRange'], merged_df['DailyAvgPower'], alpha=0.6, color='teal')
+    axes[2, 1].set_title('Temperature Range vs Daily Avg Power', fontsize=12)
+    axes[2, 1].set_xlabel('Daily Temperature Range (°C)')
+    axes[2, 1].set_ylabel('Daily Avg Power (kW)')
+    axes[2, 1].grid(True, alpha=0.3)
+    
+    plt.colorbar(im, ax=axes[2, 0], shrink=0.6)
     plt.tight_layout()
     plt.show(block=False)
 
@@ -353,16 +426,17 @@ def plot_csv_results():
             print(f"❌ Error loading epoch differences: {e}")
 
 def plot_epoch_results(epoch_df):
-    """Plot epoch training results"""
+    """Plot epoch training results with enhanced A4-vertical layout"""
     unique_epochs = sorted(epoch_df['Epoch'].unique())
     
-    fig, axes = plt.subplots(2, 3, figsize=(18, 12))
-    fig.suptitle('ML Training Results - Epoch Progression', fontsize=16, fontweight='bold')
+    # More vertical layout for A4 compatibility (3 rows, 2 columns)
+    fig, axes = plt.subplots(3, 2, figsize=(8.5, 12))  # A4-like proportions
+    fig.suptitle('ML Training Results - Epoch Progression', fontsize=14, fontweight='bold')
     
     # MSE progression
     epoch_mse = epoch_df.groupby('Epoch')['MSE'].first()
     axes[0, 0].plot(epoch_mse.index, epoch_mse.values, 'bo-', linewidth=2, markersize=6)
-    axes[0, 0].set_title('MSE vs Epochs')
+    axes[0, 0].set_title('MSE vs Epochs', fontsize=12)
     axes[0, 0].set_xlabel('Epochs')
     axes[0, 0].set_ylabel('Mean Squared Error')
     axes[0, 0].grid(True, alpha=0.3)
@@ -370,96 +444,149 @@ def plot_epoch_results(epoch_df):
     # Error rate progression
     epoch_error_rate = epoch_df.groupby('Epoch')['Error_Rate_%'].first()
     axes[0, 1].plot(epoch_error_rate.index, epoch_error_rate.values, 'ro-', linewidth=2, markersize=6)
-    axes[0, 1].set_title('Error Rate vs Epochs')
+    axes[0, 1].set_title('Error Rate vs Epochs', fontsize=12)
     axes[0, 1].set_xlabel('Epochs')
     axes[0, 1].set_ylabel('Error Rate (%)')
     axes[0, 1].grid(True, alpha=0.3)
     
-    # Prediction accuracy scatter for final epoch
-    final_epoch_data = epoch_df[epoch_df['Epoch'] == unique_epochs[-1]]
-    axes[0, 2].scatter(final_epoch_data['Actual_kW'], final_epoch_data['Predicted_kW'], alpha=0.6)
-    axes[0, 2].plot([final_epoch_data['Actual_kW'].min(), final_epoch_data['Actual_kW'].max()],
-                    [final_epoch_data['Actual_kW'].min(), final_epoch_data['Actual_kW'].max()], 'r--', alpha=0.8)
-    axes[0, 2].set_title(f'Actual vs Predicted (Epoch {unique_epochs[-1]})')
-    axes[0, 2].set_xlabel('Actual Power (kW)')
-    axes[0, 2].set_ylabel('Predicted Power (kW)')
-    axes[0, 2].grid(True, alpha=0.3)
+    # Actual vs Predicted for ALL epochs with distinct colors and legends
+    colors = ['blue', 'red', 'green', 'orange', 'purple', 'brown', 'pink', 'gray', 'olive', 'cyan']
+    
+    for i, epoch in enumerate(unique_epochs):
+        epoch_data = epoch_df[epoch_df['Epoch'] == epoch]
+        color = colors[i % len(colors)]
+        axes[1, 0].scatter(epoch_data['Actual_kW'], epoch_data['Predicted_kW'], 
+                          alpha=0.7, color=color, label=f'{epoch} epochs', s=25)
+    
+    # Add perfect prediction line
+    min_val = epoch_df['Actual_kW'].min()
+    max_val = epoch_df['Actual_kW'].max()
+    axes[1, 0].plot([min_val, max_val], [min_val, max_val], 'k--', alpha=0.8, linewidth=2, label='Perfect Prediction')
+    axes[1, 0].set_title('Actual vs Predicted (All Epochs)', fontsize=12)
+    axes[1, 0].set_xlabel('Actual Power (kW)')
+    axes[1, 0].set_ylabel('Predicted Power (kW)')
+    axes[1, 0].legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=7)
+    axes[1, 0].grid(True, alpha=0.3)
     
     # Error distribution for final epoch
-    axes[1, 0].hist(final_epoch_data['Error_kW'], bins=30, alpha=0.7, color='purple')
-    axes[1, 0].set_title(f'Error Distribution (Epoch {unique_epochs[-1]})')
-    axes[1, 0].set_xlabel('Prediction Error (kW)')
-    axes[1, 0].set_ylabel('Frequency')
-    axes[1, 0].grid(True, alpha=0.3)
+    final_epoch_data = epoch_df[epoch_df['Epoch'] == unique_epochs[-1]]
+    axes[1, 1].hist(final_epoch_data['Error_kW'], bins=30, alpha=0.7, color='purple')
+    axes[1, 1].set_title(f'Error Distribution (Epoch {unique_epochs[-1]})', fontsize=12)
+    axes[1, 1].set_xlabel('Prediction Error (kW)')
+    axes[1, 1].set_ylabel('Frequency')
+    axes[1, 1].grid(True, alpha=0.3)
     
     # Average error per epoch
     avg_abs_error = epoch_df.groupby('Epoch')['Error_kW'].apply(lambda x: np.abs(x).mean())
-    axes[1, 1].plot(avg_abs_error.index, avg_abs_error.values, 'go-', linewidth=2, markersize=6)
-    axes[1, 1].set_title('Average Absolute Error vs Epochs')
-    axes[1, 1].set_xlabel('Epochs')
-    axes[1, 1].set_ylabel('Average Absolute Error (kW)')
-    axes[1, 1].grid(True, alpha=0.3)
+    axes[2, 0].plot(avg_abs_error.index, avg_abs_error.values, 'go-', linewidth=2, markersize=6)
+    axes[2, 0].set_title('Average Absolute Error vs Epochs', fontsize=12)
+    axes[2, 0].set_xlabel('Epochs')
+    axes[2, 0].set_ylabel('Average Absolute Error (kW)')
+    axes[2, 0].grid(True, alpha=0.3)
     
     # Prediction spread by epoch
     epoch_std = epoch_df.groupby('Epoch')['Predicted_kW'].std()
-    axes[1, 2].plot(epoch_std.index, epoch_std.values, 'mo-', linewidth=2, markersize=6)
-    axes[1, 2].set_title('Prediction Variability vs Epochs')
-    axes[1, 2].set_xlabel('Epochs')
-    axes[1, 2].set_ylabel('Prediction Std Deviation (kW)')
-    axes[1, 2].grid(True, alpha=0.3)
+    axes[2, 1].plot(epoch_std.index, epoch_std.values, 'mo-', linewidth=2, markersize=6)
+    axes[2, 1].set_title('Prediction Variability vs Epochs', fontsize=12)
+    axes[2, 1].set_xlabel('Epochs')
+    axes[2, 1].set_ylabel('Prediction Std Deviation (kW)')
+    axes[2, 1].grid(True, alpha=0.3)
     
     plt.tight_layout()
     plt.show(block=False)
 
 def plot_epoch_differences(diff_df):
-    """Plot epoch difference analysis"""
+    """Plot epoch difference analysis with A4-vertical layout"""
     unique_transitions = diff_df[['From_Epoch', 'To_Epoch']].drop_duplicates()
     
-    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-    fig.suptitle('Epoch-to-Epoch Prediction Changes Analysis', fontsize=16, fontweight='bold')
+    # More vertical layout for A4 compatibility (3 rows, 2 columns)
+    fig, axes = plt.subplots(3, 2, figsize=(8.5, 12))  # A4-like proportions
+    fig.suptitle('Epoch-to-Epoch Prediction Changes Analysis', fontsize=14, fontweight='bold')
     
     # Mean differences across epoch transitions
     mean_diffs = diff_df.groupby(['From_Epoch', 'To_Epoch'])['Mean_Difference'].first()
     transition_labels = [f"{int(idx[0])}-{int(idx[1])}" for idx in mean_diffs.index]
     
     axes[0, 0].bar(range(len(mean_diffs)), mean_diffs.values, alpha=0.7, color='skyblue')
-    axes[0, 0].set_title('Mean Prediction Changes Between Epochs')
-    axes[0, 0].set_xlabel('Epoch Transitions')
+    axes[0, 0].set_title('Mean Prediction Differences', fontsize=12)
+    axes[0, 0].set_xlabel('Epoch Transition')
     axes[0, 0].set_ylabel('Mean Difference (kW)')
     axes[0, 0].set_xticks(range(len(transition_labels)))
-    axes[0, 0].set_xticklabels(transition_labels, rotation=45)
+    axes[0, 0].set_xticklabels(transition_labels, rotation=45, fontsize=9)
     axes[0, 0].grid(True, alpha=0.3)
     
-    # Standard deviation of differences
+    # Standard deviations of differences
     std_diffs = diff_df.groupby(['From_Epoch', 'To_Epoch'])['Std_Difference'].first()
+    
     axes[0, 1].bar(range(len(std_diffs)), std_diffs.values, alpha=0.7, color='lightcoral')
-    axes[0, 1].set_title('Prediction Change Variability Between Epochs')
-    axes[0, 1].set_xlabel('Epoch Transitions')
+    axes[0, 1].set_title('Std Dev of Changes', fontsize=12)
+    axes[0, 1].set_xlabel('Epoch Transition')
     axes[0, 1].set_ylabel('Std Deviation (kW)')
     axes[0, 1].set_xticks(range(len(transition_labels)))
-    axes[0, 1].set_xticklabels(transition_labels, rotation=45)
+    axes[0, 1].set_xticklabels(transition_labels, rotation=45, fontsize=9)
     axes[0, 1].grid(True, alpha=0.3)
     
-    # Distribution of all prediction differences
-    axes[1, 0].hist(diff_df['Prediction_Difference'], bins=50, alpha=0.7, color='lightgreen')
-    axes[1, 0].set_title('Distribution of All Prediction Changes')
+    # Distribution of prediction differences for each transition
+    colors = ['blue', 'red', 'green', 'orange', 'purple', 'brown', 'pink', 'gray', 'olive']
+    
+    for i, (from_epoch, to_epoch) in enumerate(unique_transitions.values):
+        transition_data = diff_df[(diff_df['From_Epoch'] == from_epoch) & 
+                                 (diff_df['To_Epoch'] == to_epoch)]
+        color = colors[i % len(colors)]
+        axes[1, 0].hist(transition_data['Prediction_Difference'], bins=20, alpha=0.6, 
+                       label=f'{int(from_epoch)}-{int(to_epoch)}', color=color)
+    
+    axes[1, 0].set_title('Distribution of Individual Changes', fontsize=12)
     axes[1, 0].set_xlabel('Prediction Difference (kW)')
     axes[1, 0].set_ylabel('Frequency')
+    axes[1, 0].legend(fontsize=7)
     axes[1, 0].grid(True, alpha=0.3)
     
-    # Box plot of differences by transition
-    transition_data = []
-    labels = []
-    for _, group in diff_df.groupby(['From_Epoch', 'To_Epoch']):
-        transition_data.append(group['Prediction_Difference'].values)
-        labels.append(f"{int(group['From_Epoch'].iloc[0])}-{int(group['To_Epoch'].iloc[0])}")
+    # Convergence pattern - showing how differences decrease over time
+    mean_abs_diffs = diff_df.groupby(['From_Epoch', 'To_Epoch'])['Prediction_Difference'].apply(lambda x: np.abs(x).mean())
     
-    axes[1, 1].boxplot(transition_data, labels=labels)
-    axes[1, 1].set_title('Prediction Change Distribution by Transition')
-    axes[1, 1].set_xlabel('Epoch Transitions')
-    axes[1, 1].set_ylabel('Prediction Difference (kW)')
-    axes[1, 1].tick_params(axis='x', rotation=45)
+    axes[1, 1].plot(range(len(mean_abs_diffs)), mean_abs_diffs.values, 'go-', linewidth=2, markersize=6)
+    axes[1, 1].set_title('Average Absolute Change', fontsize=12)
+    axes[1, 1].set_xlabel('Epoch Transition')
+    axes[1, 1].set_ylabel('Average Absolute Change (kW)')
+    axes[1, 1].set_xticks(range(len(transition_labels)))
+    axes[1, 1].set_xticklabels(transition_labels, rotation=45, fontsize=9)
     axes[1, 1].grid(True, alpha=0.3)
+    
+    # Prediction stability (difference variance analysis)
+    var_diffs = diff_df.groupby(['From_Epoch', 'To_Epoch'])['Prediction_Difference'].var()
+    
+    axes[2, 0].plot(range(len(var_diffs)), var_diffs.values, 'mo-', linewidth=2, markersize=6)
+    axes[2, 0].set_title('Prediction Change Variance', fontsize=12)
+    axes[2, 0].set_xlabel('Epoch Transition')
+    axes[2, 0].set_ylabel('Variance (kW²)')
+    axes[2, 0].set_xticks(range(len(transition_labels)))
+    axes[2, 0].set_xticklabels(transition_labels, rotation=45, fontsize=9)
+    axes[2, 0].grid(True, alpha=0.3)
+    
+    # Summary statistics table visualization
+    summary_stats = []
+    for from_epoch, to_epoch in unique_transitions.values:
+        transition_data = diff_df[(diff_df['From_Epoch'] == from_epoch) & 
+                                 (diff_df['To_Epoch'] == to_epoch)]
+        stats = {
+            'Transition': f'{int(from_epoch)}-{int(to_epoch)}',
+            'Mean': transition_data['Prediction_Difference'].mean(),
+            'Std': transition_data['Prediction_Difference'].std(),
+            'Min': transition_data['Prediction_Difference'].min(),
+            'Max': transition_data['Prediction_Difference'].max()
+        }
+        summary_stats.append(stats)
+    
+    # Create text summary in the final subplot
+    axes[2, 1].axis('off')
+    axes[2, 1].set_title('Summary Statistics', fontsize=12)    
+    table_text = "Transition | Mean | Std | Min | Max\n" + "-" * 35 + "\n"
+    for stat in summary_stats:
+        table_text += f"{stat['Transition']:>8} | {stat['Mean']:>5.3f} | {stat['Std']:>4.3f} | {stat['Min']:>5.3f} | {stat['Max']:>5.3f}\n"
+    
+    axes[2, 1].text(0.05, 0.95, table_text, transform=axes[2, 1].transAxes, fontsize=9, 
+                   verticalalignment='top', fontfamily='monospace')
     
     plt.tight_layout()
     plt.show(block=False)
@@ -491,14 +618,17 @@ def plot_actual_vs_predicted_5x2():
             std_delta = group['Std_Difference'].iloc[0]
             delta_stats[to_epoch] = {'mean_delta': mean_delta, 'std_delta': std_delta, 'from_epoch': from_epoch}
     
-    # Create 5x2 subplot grid with automatic font scaling
-    fig, axes = plt.subplots(5, 2, figsize=(16, 20))
+    # Create 5x2 subplot grid with A4-friendly dimensions
+    fig, axes = plt.subplots(5, 2, figsize=(8.5, 14))  # Taller and narrower for A4
     
     fig.suptitle('Actual vs Predicted Energy Consumption - Incremental Training Comparison', 
-                 fontweight='bold')
+                 fontsize=14, fontweight='bold')
     
     # Flatten axes for easier iteration
     axes_flat = axes.flatten()
+    
+    # Define distinct colors for each epoch
+    colors = ['blue', 'red', 'green', 'orange', 'purple', 'brown', 'pink', 'gray', 'olive', 'cyan']
     
     # Plot each epoch's results
     for i, epoch in enumerate(epochs):
@@ -506,16 +636,17 @@ def plot_actual_vs_predicted_5x2():
             break
             
         epoch_data = results_df[results_df['Epoch'] == epoch]
+        color = colors[i % len(colors)]
         
         # Scatter plot: Actual vs Predicted
         axes_flat[i].scatter(epoch_data['Actual_kW'], epoch_data['Predicted_kW'], 
-                           alpha=0.6, s=20, color='blue')
+                           alpha=0.7, s=25, color=color, label=f'{epoch} epochs')
         
         # Perfect prediction line (y=x)
         min_val = min(epoch_data['Actual_kW'].min(), epoch_data['Predicted_kW'].min())
         max_val = max(epoch_data['Actual_kW'].max(), epoch_data['Predicted_kW'].max())
         axes_flat[i].plot([min_val, max_val], [min_val, max_val], 
-                         'r--', linewidth=2, alpha=0.8, label='Perfect Prediction')
+                         'k--', linewidth=2, alpha=0.8, label='Perfect Prediction')
         
         # Calculate R² and MSE for the subplot
         mse = epoch_data['MSE'].iloc[0]
@@ -530,11 +661,12 @@ def plot_actual_vs_predicted_5x2():
             from_epoch = delta_stats[epoch]['from_epoch']
             title += f'\nΔ from {from_epoch}: μ={mean_delta:.4f}, σ={std_delta:.4f}'
         
-        axes_flat[i].set_title(title)
-        axes_flat[i].set_xlabel('Actual Energy (kW)')
-        axes_flat[i].set_ylabel('Predicted Energy (kW)')
+        axes_flat[i].set_title(title, fontsize=10)
+        axes_flat[i].set_xlabel('Actual Energy (kW)', fontsize=9)
+        axes_flat[i].set_ylabel('Predicted Energy (kW)', fontsize=9)
         axes_flat[i].grid(True, alpha=0.3)
-        axes_flat[i].legend()
+        axes_flat[i].legend(fontsize=7)
+        axes_flat[i].tick_params(labelsize=8)
         
         # Set equal aspect ratio for better comparison
         axes_flat[i].set_aspect('equal', adjustable='box')
@@ -565,10 +697,10 @@ def plot_iteration_differences_5x2():
         print("❌ Need at least 2 epochs to calculate differences!")
         return
     
-    # Create 5x2 subplot grid with matplotlib's auto-scaling
-    fig, axes = plt.subplots(5, 2, figsize=(16, 20))
+    # Create 5x2 subplot grid with A4-friendly dimensions
+    fig, axes = plt.subplots(5, 2, figsize=(8.5, 14))  # Taller and narrower for A4
     fig.suptitle('Prediction Differences Between Consecutive Training Epochs', 
-                 fontweight='bold')  # No manual font size - let matplotlib decide
+                 fontsize=14, fontweight='bold')
     
     # Flatten axes for easier iteration
     axes_flat = axes.flatten()
@@ -599,11 +731,12 @@ def plot_iteration_differences_5x2():
         max_diff = np.max(np.abs(prediction_diff))
         
         axes_flat[plot_count].set_title(f'Epoch {current_epoch} → {next_epoch}\n' +
-                                       f'Mean |Δ|: {mean_diff:.4f}, Max |Δ|: {max_diff:.4f}')
-        axes_flat[plot_count].set_xlabel('Data Point')
-        axes_flat[plot_count].set_ylabel('Prediction Difference (kW)')
+                                       f'Mean |Δ|: {mean_diff:.4f}, Max |Δ|: {max_diff:.4f}', fontsize=10)
+        axes_flat[plot_count].set_xlabel('Data Point', fontsize=9)
+        axes_flat[plot_count].set_ylabel('Prediction Difference (kW)', fontsize=9)
         axes_flat[plot_count].grid(True, alpha=0.3)
         axes_flat[plot_count].axhline(y=0, color='black', linestyle='-', linewidth=1, alpha=0.5)
+        axes_flat[plot_count].tick_params(labelsize=8)
         
         plot_count += 1
     
@@ -612,7 +745,7 @@ def plot_iteration_differences_5x2():
         summary_ax = axes_flat[9]  # Last subplot
         summary_ax.axis('off')
         
-        # Create summary text - let matplotlib auto-size the text
+        # Create summary text with adjusted font size for A4
         summary_text = "Summary of Iteration Differences:\n\n"
         summary_text += "🔴 Red bars: Prediction increased\n"
         summary_text += "🔵 Blue bars: Prediction decreased\n\n"
@@ -635,7 +768,7 @@ def plot_iteration_differences_5x2():
         summary_text += f"Max |Difference|: {np.max(np.abs(all_diffs)):.4f} kW"
         
         summary_ax.text(0.05, 0.95, summary_text, transform=summary_ax.transAxes, 
-                       verticalalignment='top',  # No manual font size
+                       verticalalignment='top', fontsize=9,
                        bbox=dict(boxstyle='round', facecolor='lightgray', alpha=0.8))
     
     # Hide unused subplots
@@ -683,17 +816,11 @@ def plot_ml_training_results_5x2():
             'from_epoch': previous_epoch
         }
     
-    # Set dynamic font scaling for this figure (10 subplots, 16x20 size)
-    set_dynamic_font_params(num_subplots=10, figure_size=(16, 20))
-    
-    # Create 5x2 subplot grid
-    fig, axes = plt.subplots(5, 2, figsize=(16, 20))
-    
-    # Calculate dynamic font sizes
-    fonts = calculate_dynamic_font_sizes(fig.get_size_inches())
+    # Create 5x2 subplot grid with A4-friendly dimensions
+    fig, axes = plt.subplots(5, 2, figsize=(8.5, 14))  # Taller and narrower for A4
     
     fig.suptitle('Incremental Epoch Comparison: ML Training Results\nBOM Weather → House 4 Energy Prediction (Enhanced with Δ Stats)', 
-                fontsize=fonts['title'], fontweight='bold')
+                fontsize=12, fontweight='bold')
     
     # Plot each epoch's results
     for i, epoch in enumerate(epochs):
@@ -723,12 +850,12 @@ def plot_ml_training_results_5x2():
             from_epoch = delta_stats[epoch]['from_epoch']
             title += f"\nΔ from {from_epoch}: μ={mean_delta:.4f}, σ={std_delta:.4f}"
         
-        ax.set_title(title, fontsize=fonts['subtitle'], fontweight='bold')
-        ax.set_xlabel('Data Point #', fontsize=fonts['label'])
-        ax.set_ylabel('Power (kW)', fontsize=fonts['label'])
-        ax.legend(fontsize=fonts['legend'])
+        ax.set_title(title, fontsize=10, fontweight='bold')
+        ax.set_xlabel('Data Point #', fontsize=9)
+        ax.set_ylabel('Power (kW)', fontsize=9)
+        ax.legend(fontsize=8)
         ax.grid(True, alpha=0.3)
-        ax.tick_params(labelsize=fonts['tick'])
+        ax.tick_params(labelsize=8)
     
     # Hide unused subplots if there are fewer than 10 epochs
     for i in range(len(epochs), 10):
@@ -738,9 +865,6 @@ def plot_ml_training_results_5x2():
     
     plt.tight_layout()
     plt.show(block=False)
-    
-    # Reset font parameters
-    reset_font_params()
     
     print("✅ ML Training Results 5x2 plot completed!")
 
