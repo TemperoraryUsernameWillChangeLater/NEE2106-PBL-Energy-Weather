@@ -306,12 +306,10 @@ def main():
     
     # Try to load and display CSV files if they exist
     plot_csv_results()
-    
-    # Create new 5x2 grid plots for ML results (reproduces ML.py plots from CSV data)
-    plot_actual_vs_predicted_5x2()
+      # Create new 5x2 grid plots for ML results (reproduces ML.py plots from CSV data)    plot_actual_vs_predicted_5x2()
     plot_iteration_differences_5x2()
     plot_ml_training_results_5x2()
-    plot_ml_differences_5x2()
+    # Removed plot_ml_differences_5x2() - was duplicate of Figure 7
     
     print("\n✅ All visualizations completed!")
     print("📁 Data sources:")
@@ -322,10 +320,11 @@ def main():
     print("   • Weather data analysis (temperature, distributions, correlations)")
     print("   • Energy consumption patterns and trends")
     print("   • Weather-energy correlation analysis")
-    print("   • ML training progression (reproduces ML.py visualizations)")
+    print("   • ML training progression with enhanced delta statistics")
     print("   • Prediction differences between training epochs")
     print("   • Actual vs predicted comparison grids")
     print("   • Statistical analysis and performance metrics")
+    print("   ⚠️  Note: Removed duplicate Figure 9 - enhanced Figure 7 with delta stats instead")
     
     # Keep all plot windows open
     print("\n📊 All plots are now displayed simultaneously!")
@@ -466,10 +465,12 @@ def plot_epoch_differences(diff_df):
     plt.show(block=False)
 
 def plot_actual_vs_predicted_5x2():
-    """Plot 5x2 grid of actual vs predicted values for each epoch"""
+    """Plot 5x2 grid of actual vs predicted values for each epoch with delta statistics"""
     print("📊 Creating 5x2 Actual vs Predicted comparison plots...")
     
     results_file = os.path.join(refined_datasets_dir, 'incremental_epoch_results.csv')
+    differences_file = os.path.join(refined_datasets_dir, 'epoch_differences_results.csv')
+    
     if not os.path.exists(results_file):
         print(f"❌ {results_file} not found! Run the ML script first.")
         return
@@ -478,11 +479,23 @@ def plot_actual_vs_predicted_5x2():
     results_df = pd.read_csv(results_file)
     epochs = sorted(results_df['Epoch'].unique())
     
-    # Create 5x2 subplot grid with automatic font scaling    # Create 5x2 subplot grid with automatic font scaling
+    # Load differences data if available for enhanced titles
+    delta_stats = {}
+    if os.path.exists(differences_file):
+        diff_df = pd.read_csv(differences_file)
+        # Calculate mean and std for each epoch transition
+        for _, group in diff_df.groupby(['From_Epoch', 'To_Epoch']):
+            from_epoch = int(group['From_Epoch'].iloc[0])
+            to_epoch = int(group['To_Epoch'].iloc[0])
+            mean_delta = group['Mean_Difference'].iloc[0]
+            std_delta = group['Std_Difference'].iloc[0]
+            delta_stats[to_epoch] = {'mean_delta': mean_delta, 'std_delta': std_delta, 'from_epoch': from_epoch}
+    
+    # Create 5x2 subplot grid with automatic font scaling
     fig, axes = plt.subplots(5, 2, figsize=(16, 20))
     
     fig.suptitle('Actual vs Predicted Energy Consumption - Incremental Training Comparison', 
-                 fontweight='bold')  # Let matplotlib handle the size
+                 fontweight='bold')
     
     # Flatten axes for easier iteration
     axes_flat = axes.flatten()
@@ -509,7 +522,15 @@ def plot_actual_vs_predicted_5x2():
         correlation = np.corrcoef(epoch_data['Actual_kW'], epoch_data['Predicted_kW'])[0, 1]
         r_squared = correlation ** 2
         
-        axes_flat[i].set_title(f'Epoch {epoch}\nMSE: {mse:.4f}, R²: {r_squared:.3f}')
+        # Enhanced title with delta statistics if available
+        title = f'Epoch {epoch}\nMSE: {mse:.4f}, R²: {r_squared:.3f}'
+        if epoch in delta_stats:
+            mean_delta = delta_stats[epoch]['mean_delta']
+            std_delta = delta_stats[epoch]['std_delta']
+            from_epoch = delta_stats[epoch]['from_epoch']
+            title += f'\nΔ from {from_epoch}: μ={mean_delta:.4f}, σ={std_delta:.4f}'
+        
+        axes_flat[i].set_title(title)
         axes_flat[i].set_xlabel('Actual Energy (kW)')
         axes_flat[i].set_ylabel('Predicted Energy (kW)')
         axes_flat[i].grid(True, alpha=0.3)
@@ -525,7 +546,7 @@ def plot_actual_vs_predicted_5x2():
     # Auto-adjust layout with dynamic spacing
     plt.tight_layout()
     plt.show(block=False)
-    print("✅ Actual vs Predicted 5x2 plot completed!")
+    print("✅ Actual vs Predicted 5x2 plot completed with delta statistics!")
 
 def plot_iteration_differences_5x2():
     """Plot 5x2 grid (9 plots) showing differences between consecutive epoch iterations"""
@@ -626,7 +647,7 @@ def plot_iteration_differences_5x2():
     print("✅ Iteration Differences 5x2 plot completed!")
 
 def plot_ml_training_results_5x2():
-    """Recreate the ML training 5x2 grid plots using CSV data"""
+    """Recreate the ML training 5x2 grid plots using CSV data with delta statistics"""
     print("📊 Creating ML Training Results 5x2 plots from CSV data...")
     
     results_file = os.path.join(refined_datasets_dir, 'incremental_epoch_results.csv')
@@ -641,7 +662,28 @@ def plot_ml_training_results_5x2():
     if len(epochs) == 0:
         print("❌ No epoch data found in CSV file!")
         return
-      # Set dynamic font scaling for this figure (10 subplots, 16x20 size)
+    
+    # Calculate delta statistics between consecutive epochs
+    delta_stats = {}
+    for i in range(1, len(epochs)):
+        current_epoch = epochs[i]
+        previous_epoch = epochs[i-1]
+        
+        current_data = results_df[results_df['Epoch'] == current_epoch].sort_values('DataPoint')
+        previous_data = results_df[results_df['Epoch'] == previous_epoch].sort_values('DataPoint')
+        
+        # Calculate prediction differences
+        prediction_diff = current_data['Predicted_kW'].values - previous_data['Predicted_kW'].values
+        mean_delta = np.mean(prediction_diff)
+        std_delta = np.std(prediction_diff)
+        
+        delta_stats[current_epoch] = {
+            'mean_delta': mean_delta,
+            'std_delta': std_delta,
+            'from_epoch': previous_epoch
+        }
+    
+    # Set dynamic font scaling for this figure (10 subplots, 16x20 size)
     set_dynamic_font_params(num_subplots=10, figure_size=(16, 20))
     
     # Create 5x2 subplot grid
@@ -650,7 +692,7 @@ def plot_ml_training_results_5x2():
     # Calculate dynamic font sizes
     fonts = calculate_dynamic_font_sizes(fig.get_size_inches())
     
-    fig.suptitle('Incremental Epoch Comparison: ML Training Results\nBOM Weather → House 4 Energy Prediction (from CSV)', 
+    fig.suptitle('Incremental Epoch Comparison: ML Training Results\nBOM Weather → House 4 Energy Prediction (Enhanced with Δ Stats)', 
                 fontsize=fonts['title'], fontweight='bold')
     
     # Plot each epoch's results
@@ -668,12 +710,20 @@ def plot_ml_training_results_5x2():
         x_range = range(1, len(epoch_data) + 1)
         ax.plot(x_range, epoch_data['Actual_kW'], 'b-', label='Actual', linewidth=2)
         ax.plot(x_range, epoch_data['Predicted_kW'], 'r--', label='Predicted', linewidth=2)
-          # Get statistics
+        
+        # Get statistics
         mse = epoch_data['MSE'].iloc[0]
         error_rate = epoch_data['Error_Rate_%'].iloc[0]
         
-        ax.set_title(f"Epochs: {epoch}\nMSE: {mse:.4f}, Error: {error_rate:.1f}%", 
-                    fontsize=fonts['subtitle'], fontweight='bold')
+        # Enhanced title with delta statistics
+        title = f"Epochs: {epoch}\nMSE: {mse:.4f}, Error: {error_rate:.1f}%"
+        if epoch in delta_stats:
+            mean_delta = delta_stats[epoch]['mean_delta']
+            std_delta = delta_stats[epoch]['std_delta']
+            from_epoch = delta_stats[epoch]['from_epoch']
+            title += f"\nΔ from {from_epoch}: μ={mean_delta:.4f}, σ={std_delta:.4f}"
+        
+        ax.set_title(title, fontsize=fonts['subtitle'], fontweight='bold')
         ax.set_xlabel('Data Point #', fontsize=fonts['label'])
         ax.set_ylabel('Power (kW)', fontsize=fonts['label'])
         ax.legend(fontsize=fonts['legend'])

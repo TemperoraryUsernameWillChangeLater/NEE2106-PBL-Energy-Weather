@@ -540,7 +540,10 @@ def run_epoch_comparison():
 def run_incremental_epoch_comparison():
     """Train a single model incrementally: 50, 100, ..., 500 epochs, storing results after each increment, and plot a 5x2 grid."""
     print("=== Incremental Epoch Comparison Study ===")
-    print("Training a single model, continuing for 50, 100, ..., 500 epochs (total 500 epochs)\n")
+    print("🚀 EFFICIENT TRAINING: Single model trained incrementally")
+    print("📈 Training progression: 50 → 100 → 150 → 200 → 250 → 300 → 350 → 400 → 450 → 500 epochs")
+    print("💡 Total epochs: 500 (not 1000+ like before!)")
+    print("⚡ Each step adds only 50 more epochs to existing model\n")
 
     # Load data
     bom, house4data_processed = load_processed_data()
@@ -552,22 +555,36 @@ def run_incremental_epoch_comparison():
     results = []    # Create and train model incrementally
     model = create_rnn_model()
     prev_epochs = 0
+    
     for i, epochs in enumerate(epoch_tests, 1):
-        print(f"[{i}/{len(epoch_tests)}] Training up to {epochs} epochs (from {prev_epochs})...")
+        additional_epochs = epochs - prev_epochs  # Calculate how many new epochs to train
+        print(f"[{i}/{len(epoch_tests)}] 🧠 Training from {prev_epochs} to {epochs} epochs (+{additional_epochs} new epochs)...")
+        
+        import time
+        start_time = time.time()
         history = model.fit(x_train, y_train, batch_size=1, initial_epoch=prev_epochs, epochs=epochs, verbose=1)
+        training_time = time.time() - start_time
+        
+        # Update prev_epochs for next iteration
+        prev_epochs = epochs
+        
         # Evaluate
         mse = model.evaluate(x_test, y_test, verbose=0)
         predictions = model.predict(x_test, verbose=0)
+        
         # Calculate error rate
         errors = [predictions[j][0][0] - y_test[j] for j in range(len(predictions))]
         error_rate = np.mean(np.abs(errors)) / np.mean(y_test) * 100
+        
         results.append({
             'epochs': epochs,
             'mse': mse,
             'error_rate': error_rate,
             'predictions': predictions
         })
-        print(f"    MSE: {mse:.4f}, Error Rate: {error_rate:.2f}%")
+        
+        print(f"    ✅ Training time: {training_time:.1f}s | MSE: {mse:.4f} | Error Rate: {error_rate:.2f}%")
+        print(f"    📊 Total epochs trained so far: {epochs} | Efficient incremental training!")
         
         # Save results to CSV after each iteration
         save_epoch_results_to_csv(epochs, y_test, predictions, mse, error_rate, i == 1)  # header only on first iteration
@@ -620,6 +637,11 @@ def run_incremental_epoch_comparison():
 
     print("\n📊 All training data saved to CSV files!")
     print("💡 Run 'python plot_refined_datasets.py' to see all visualizations")
+    print(f"\n🚀 EFFICIENCY ACHIEVED!")
+    print(f"   ✅ Total epochs trained: 500 (not 1000+ wasteful epochs)")
+    print(f"   ✅ Incremental training: Each step adds only 50 epochs")
+    print(f"   ✅ Model reused efficiently across all {len(epoch_tests)} training phases")
+    print(f"   ✅ Massive time savings compared to training from scratch each time!")
     
     # Create summary table
     summary_data = []
