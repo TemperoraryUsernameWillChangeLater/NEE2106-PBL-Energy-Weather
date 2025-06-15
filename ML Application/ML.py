@@ -282,15 +282,15 @@ def generate_training_data(bom, house4data_processed):
     return x_train_full, y_train_full
 
 def create_train_test_split(x_train_full, y_train_full):
-    """Separate test set and training set"""
-    print("Creating train/test split...")
+    """Separate test set and training set with 80-20 split"""
+    print("Creating train/test split (80-20)...")
     
     #separate test set and training set
-    part = int(len(x_train_full) * 0.05)
+    part = int(len(x_train_full) * 0.20)  # 20% for testing
     x_test = x_train_full[-part:]
     y_test = y_train_full[-part:]
     
-    x_train = x_train_full[:-part]
+    x_train = x_train_full[:-part]  # 80% for training
     y_train = y_train_full[:-part]
     
     x_test = np.array(x_test)
@@ -538,12 +538,13 @@ def run_epoch_comparison():
     print(f"   • Beyond optimal point, more epochs may lead to overfitting")
 
 def run_incremental_epoch_comparison():
-    """Train a single model incrementally: 50, 100, ..., 500 epochs, storing results after each increment, and plot a 5x2 grid."""
+    """Train a single model incrementally: 50, 100, ..., 500 epochs with 80-20 split, storing results after each increment, and automatically generate plots."""
     print("=== Incremental Epoch Comparison Study ===")
-    print("🚀 EFFICIENT TRAINING: Single model trained incrementally")
+    print("🚀 EFFICIENT TRAINING: Single model trained incrementally (80-20 split)")
     print("📈 Training progression: 50 → 100 → 150 → 200 → 250 → 300 → 350 → 400 → 450 → 500 epochs")
     print("💡 Total epochs: 500 (not 1000+ like before!)")
-    print("⚡ Each step adds only 50 more epochs to existing model\n")
+    print("⚡ Each step adds only 50 more epochs to existing model")
+    print("🎨 Plots will be generated automatically after training completes\n")
 
     # Load data
     bom, house4data_processed = load_processed_data()
@@ -593,8 +594,7 @@ def run_incremental_epoch_comparison():
     
     print(f"\n📊 Training completed! Visualization will be handled by plot_refined_datasets.py")
     print(f"📁 Results saved to CSV files in: {refined_datasets_dir}")
-    
-    # Call the plotting script to handle all visualizations
+      # Call the plotting script to handle all visualizations
     try:
         import subprocess
         import sys
@@ -602,19 +602,20 @@ def run_incremental_epoch_comparison():
         plot_script = os.path.join(os.path.dirname(__file__), 'plot_refined_datasets.py')
         print(f"\n🎨 Launching visualization script: {plot_script}")
         
-        # Run the plotting script in a separate process
-        result = subprocess.run([sys.executable, plot_script], capture_output=True, text=True)
+        # Run the plotting script in a separate process with real-time output
+        result = subprocess.run([sys.executable, plot_script], 
+                              capture_output=False,  # Show output in real-time
+                              text=True, 
+                              cwd=os.path.dirname(__file__))  # Set working directory
         
         if result.returncode == 0:
             print("✅ Plotting script completed successfully!")
         else:
-            print(f"⚠️  Plotting script had issues:")
-            print(f"   stdout: {result.stdout}")
-            print(f"   stderr: {result.stderr}")
+            print(f"⚠️  Plotting script returned code: {result.returncode}")
             
     except Exception as e:
         print(f"⚠️  Could not launch plotting script: {e}")
-        print("💡 You can run 'python plot_refined_datasets.py' manually to see visualizations")    # Difference comparison plotting removed - now handled by plot_refined_datasets.py
+        print("💡 You can run 'python plot_refined_datasets.py' manually to see visualizations")# Difference comparison plotting removed - now handled by plot_refined_datasets.py
     # All plotting functionality moved to plot_refined_datasets.py for better organization
     
     if len(results) > 1:
