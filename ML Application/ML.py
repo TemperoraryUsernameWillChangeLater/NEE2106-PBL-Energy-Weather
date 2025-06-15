@@ -760,27 +760,21 @@ def save_difference_results_to_csv(epoch_from, epoch_to, prediction_diff, mean_d
         print(f"    📁 Appended difference: {epoch_from}→{epoch_to} epochs")
 
 def run_dual_split_comparison():
-    """Train ONE model efficiently: 80% → 95% at each epoch interval (500 total epochs, not 1000!)"""
+    """Train ONE model: 80%→95%→80%→95% within each interval (500 total epochs)"""
     print("=== Efficient Dual Split Comparison Study ===")
-    print("🔄 SMART TRAINING: Single model progresses 80% → 95% at each interval")
-    print("📈 Training progression: 50 → 100 → 150 → 200 → 250 → 300 → 350 → 400 → 450 → 500 epochs")
-    print("⚡ Total epochs: 500 (not 1000!) - Progressive 80% → 95% expansion")
-    print("📊 Dual evaluation at each interval\n")
+    print("🔄 CONTINUOUS TRAINING: 80% then 95% within each 50-epoch interval")
+    print("📈 Pattern: [80%(25) + 95%(25)] × 10 intervals = 500 epochs")
+    print("⚡ Same model continues learning throughout entire process")
+    print("📊 CSV saved after each 80% and 95% training phase\n")
 
     # Load data
     bom, house4data_processed = load_processed_data()
     x_train_full, y_train_full = generate_training_data(bom, house4data_processed)
-    
-    # Prepare both splits upfront
+      # Prepare both splits upfront
     x_train_80, x_test_80, y_train_80, y_test_80 = create_train_test_split(x_train_full, y_train_full, test_split=0.20)
     x_train_95, x_test_95, y_train_95, y_test_95 = create_train_test_split(x_train_full, y_train_full, test_split=0.05)
     
-    # Epoch increments
-    epoch_tests = list(range(50, 501, 50))  # [50, 100, ..., 500]
-    
     # Storage for results
-    results_80 = []
-    results_95 = []
     detailed_results_80 = []
     detailed_results_95 = []
     differences_results_80 = []
@@ -788,56 +782,51 @@ def run_dual_split_comparison():
     
     # Create single model that will be used throughout
     model = create_rnn_model()
-    prev_epochs = 0
+    current_epoch = 0
     prev_predictions_80 = None
     prev_predictions_95 = None
     
-    print("🚀 Starting efficient progressive training...")
-    print("=" * 60)
-    
-    for i, epochs in enumerate(epoch_tests, 1):
-        additional_epochs = epochs - prev_epochs
-        print(f"\n[{i}/{len(epoch_tests)}] 🧠 EPOCH INTERVAL: {prev_epochs} → {epochs} (+{additional_epochs} epochs)")
+    print("🚀 Starting continuous 80%→95% training...")
+    print("=" * 60)    
+    # 10 intervals of 50 epochs each (25 + 25)
+    for interval in range(1, 11):
+        print(f"\n[INTERVAL {interval}/10] 🧠 Training sequence: 80% → 95%")
         
-        # PHASE 1: Train on 80% data
-        print(f"  Phase 1: Training on 80% data for {additional_epochs} epochs...")
+        # === PHASE 1: Train on 80% for 25 epochs ===
+        print(f"  Phase 1: Training on 80% data...")
         import time
         start_time = time.time()
-        history = model.fit(x_train_80, y_train_80, batch_size=1, initial_epoch=prev_epochs, epochs=epochs, verbose=0)
         
-        # Evaluate on 80-20 split
+        target_epoch_80 = current_epoch + 25
+        history = model.fit(x_train_80, y_train_80, batch_size=1, 
+                           initial_epoch=current_epoch, epochs=target_epoch_80, verbose=1)
+        current_epoch = target_epoch_80
+        
+        # Evaluate and save 80% results
         mse_80 = model.evaluate(x_test_80, y_test_80, verbose=0)
         predictions_80 = model.predict(x_test_80, verbose=0)
-        
-        # Calculate error rate for 80-20
         errors_80 = [predictions_80[j][0][0] - y_test_80[j] for j in range(len(predictions_80))]
         error_rate_80 = np.mean(np.abs(errors_80)) / np.mean(y_test_80) * 100
-        
         training_time_80 = time.time() - start_time
-        print(f"    80-20 Results: MSE={mse_80:.4f}, Error Rate={error_rate_80:.2f}%, Time={training_time_80:.1f}s")
         
-        # Store 80-20 results
-        results_80.append({
-            'epochs': epochs,
-            'mse': mse_80,
-            'error_rate': error_rate_80,
-            'training_time': training_time_80,
-            'predictions': predictions_80
-        })
+        print(f"    80% Results (Epoch {current_epoch}): MSE={mse_80:.4f}, Error Rate={error_rate_80:.2f}%, Time={training_time_80:.1f}s")
         
-        # Store detailed 80-20 results
+        # Store detailed 80% results
         for j in range(len(predictions_80)):
             detailed_results_80.append({
-                'Epoch': epochs,
+                'Epoch': current_epoch,
                 'DataPoint': j + 1,
                 'Actual_kW': y_test_80[j],
                 'Predicted_kW': predictions_80[j][0][0],
                 'Error_kW': predictions_80[j][0][0] - y_test_80[j],
                 'MSE': mse_80,
-                'Error_Rate_%': error_rate_80
+                'Error_Rate_%': error_rate_80,
+                'Trained_On': '80-20',
+                'Interval': interval,
+                'Phase': '80%'
             })
         
-        # Calculate differences from previous epoch for 80-20
+        # Calculate differences for 80%
         if prev_predictions_80 is not None:
             pred_diffs_80 = [predictions_80[j][0][0] - prev_predictions_80[j][0][0] for j in range(len(predictions_80))]
             mean_diff_80 = np.mean(pred_diffs_80)
@@ -845,57 +834,54 @@ def run_dual_split_comparison():
             
             for j in range(len(predictions_80)):
                 differences_results_80.append({
-                    'From_Epoch': epochs - 50,
-                    'To_Epoch': epochs,
+                    'From_Epoch': current_epoch - 25,
+                    'To_Epoch': current_epoch,
                     'DataPoint': j + 1,
                     'Previous_Prediction_kW': prev_predictions_80[j][0][0],
                     'Current_Prediction_kW': predictions_80[j][0][0],
                     'Prediction_Difference_kW': pred_diffs_80[j],
                     'Mean_Difference_kW': mean_diff_80,
-                    'Std_Difference_kW': std_diff_80
+                    'Std_Difference_kW': std_diff_80,
+                    'Trained_On': '80-20',
+                    'Interval': interval
                 })
         
-        # PHASE 2: Continue training on 95% data (expand training set)
-        print(f"  Phase 2: Expanding to 95% data and continuing training...")
+        prev_predictions_80 = predictions_80.copy()
+        
+        # === PHASE 2: Continue training on 95% for 25 epochs ===
+        print(f"  Phase 2: Continuing with 95% data...")
         start_time = time.time()
         
-        # Continue training the SAME model with expanded 95% dataset
-        # Note: We continue from current epoch, adding more data but same epoch count
-        history = model.fit(x_train_95, y_train_95, batch_size=1, initial_epoch=prev_epochs, epochs=epochs, verbose=0)
+        target_epoch_95 = current_epoch + 25
+        history = model.fit(x_train_95, y_train_95, batch_size=1, 
+                           initial_epoch=current_epoch, epochs=target_epoch_95, verbose=1)
+        current_epoch = target_epoch_95
         
-        # Evaluate on 95-5 split
+        # Evaluate and save 95% results
         mse_95 = model.evaluate(x_test_95, y_test_95, verbose=0)
         predictions_95 = model.predict(x_test_95, verbose=0)
-        
-        # Calculate error rate for 95-5
         errors_95 = [predictions_95[j][0][0] - y_test_95[j] for j in range(len(predictions_95))]
         error_rate_95 = np.mean(np.abs(errors_95)) / np.mean(y_test_95) * 100
-        
         training_time_95 = time.time() - start_time
-        print(f"    95-5 Results: MSE={mse_95:.4f}, Error Rate={error_rate_95:.2f}%, Time={training_time_95:.1f}s")
         
-        # Store 95-5 results
-        results_95.append({
-            'epochs': epochs,
-            'mse': mse_95,
-            'error_rate': error_rate_95,
-            'training_time': training_time_95,
-            'predictions': predictions_95
-        })
+        print(f"    95% Results (Epoch {current_epoch}): MSE={mse_95:.4f}, Error Rate={error_rate_95:.2f}%, Time={training_time_95:.1f}s")
         
-        # Store detailed 95-5 results
+        # Store detailed 95% results
         for j in range(len(predictions_95)):
             detailed_results_95.append({
-                'Epoch': epochs,
+                'Epoch': current_epoch,
                 'DataPoint': j + 1,
                 'Actual_kW': y_test_95[j],
                 'Predicted_kW': predictions_95[j][0][0],
                 'Error_kW': predictions_95[j][0][0] - y_test_95[j],
                 'MSE': mse_95,
-                'Error_Rate_%': error_rate_95
+                'Error_Rate_%': error_rate_95,
+                'Trained_On': '95-5',
+                'Interval': interval,
+                'Phase': '95%'
             })
         
-        # Calculate differences from previous epoch for 95-5
+        # Calculate differences for 95%
         if prev_predictions_95 is not None:
             pred_diffs_95 = [predictions_95[j][0][0] - prev_predictions_95[j][0][0] for j in range(len(predictions_95))]
             mean_diff_95 = np.mean(pred_diffs_95)
@@ -903,40 +889,43 @@ def run_dual_split_comparison():
             
             for j in range(len(predictions_95)):
                 differences_results_95.append({
-                    'From_Epoch': epochs - 50,
-                    'To_Epoch': epochs,
+                    'From_Epoch': current_epoch - 25,
+                    'To_Epoch': current_epoch,
                     'DataPoint': j + 1,
                     'Previous_Prediction_kW': prev_predictions_95[j][0][0],
                     'Current_Prediction_kW': predictions_95[j][0][0],
                     'Prediction_Difference_kW': pred_diffs_95[j],
                     'Mean_Difference_kW': mean_diff_95,
-                    'Std_Difference_kW': std_diff_95
+                    'Std_Difference_kW': std_diff_95,
+                    'Trained_On': '95-5',
+                    'Interval': interval
                 })
         
-        # Update for next iteration
-        prev_epochs = epochs
-        prev_predictions_80 = predictions_80.copy()
         prev_predictions_95 = predictions_95.copy()
         
-        print(f"    ✅ Interval {i} completed - Progressive learning continues...")
+        print(f"    ✅ Interval {interval} completed: Total epochs = {current_epoch}")
+        
+        # Save intermediate results after each interval
+        if interval % 2 == 0:  # Save every 2 intervals
+            print(f"    💾 Saving intermediate results...")
+            save_split_results(detailed_results_80, differences_results_80, "80_20")
+            save_split_results(detailed_results_95, differences_results_95, "95_5")
     
-    # Save all results
+    # Save all final results
     save_split_results(detailed_results_80, differences_results_80, "80_20")
-    save_split_results(detailed_results_95, differences_results_95, "95_5")
-    save_dual_split_summary(results_80, results_95)
-    
-    print(f"\n✅ Efficient dual split comparison completed!")
-    print(f"⚡ Total epochs trained: 500 (not 1000!) - 50% time savings")
+    save_split_results(detailed_results_95, differences_results_95, "95_5")    
+    print(f"\n✅ Continuous dual split training completed!")
+    print(f"⚡ Total epochs trained: 500 with 80%→95% pattern within each interval")
+    print("🔄 Training pattern: [80%(25) + 95%(25)] × 10 intervals")
     print("📁 Generated files:")
     print("   • incremental_epoch_results_80_20.csv (80-20 split detailed results)")
     print("   • epoch_differences_results_80_20.csv (80-20 split differences)")
     print("   • incremental_epoch_results_95_5.csv (95-5 split detailed results)")
     print("   • epoch_differences_results_95_5.csv (95-5 split differences)")
-    print("   • dual_split_comparison_summary.csv (performance comparison)")
     print("\n🧠 Training Strategy:")
-    print("   • Single model progressively learns from 80% → 95% at each epoch interval")
-    print("   • Efficient reuse of learned weights and patterns")
-    print("   • Direct comparison of train/test split effects on same model state")
+    print("   • Model trains on 80% then 95% within each 50-epoch interval")
+    print("   • Same model accumulates knowledge from both training set sizes")
+    print("   • CSV saved after each 80% and 95% training phase")
 
 # Removed train_incremental_on_split - now using efficient single model approach in run_dual_split_comparison
 
@@ -969,6 +958,7 @@ def save_dual_split_summary(results_80, results_95):
     for i, (r80, r95) in enumerate(zip(results_80, results_95)):
         summary_data.append({
             'Epochs': r80['epochs'],
+            'Trained_On': r80['trained_on'],
             'MSE_80_20': r80['mse'],
             'MSE_95_5': r95['mse'],
             'Error_Rate_80_20_%': r80['error_rate'],
