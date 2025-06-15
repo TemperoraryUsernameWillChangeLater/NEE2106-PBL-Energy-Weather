@@ -351,10 +351,11 @@ def main():
     print("   1. Weather data analysis from .dat files")
     print("   2. Energy consumption analysis from .dat files") 
     print("   3. Weather-energy correlation analysis")
-    print("   4. ML training results analysis from CSV files (enhanced with Figure 5 content)")
-    print("   5. ML training progression (reproduces ML.py plots from CSV data)")
-    print("   6. Prediction differences between epochs")
-    print("   7. Actual vs predicted comparisons")
+    print("   4. ML training results analysis from CSV files (80-20 or 95-5 split)")
+    print("   5. Actual vs predicted comparisons (80-20 split)")
+    print("   6. Prediction differences between epochs (80-20 split)")
+    print("   7. Prediction differences between epochs (95-5 split)")
+    print("   8. ML training results comprehensive analysis (95-5 split)")
     print("="*60)
     
     # Load data from .dat files
@@ -371,18 +372,25 @@ def main():
     print_data_summary(bom_df, house4_df)
     
     print("\n📈 Creating visualizations...")
-    
-    # Create plots from .dat files
+      # Create plots from .dat files
     plot_bom_weather_data(bom_df)
     plot_house4_energy_data(house4_df)
     plot_correlation_analysis(bom_df, house4_df)
     
     # Try to load and display CSV files if they exist
-    plot_csv_results()
-      # Create new 5x2 grid plots for ML results (reproduces ML.py plots from CSV data)    plot_actual_vs_predicted_5x2()
-    plot_iteration_differences_5x2()
-    plot_ml_training_results_5x2()
-    # Removed plot_ml_differences_5x2() - was duplicate of Figure 7
+    plot_csv_results()  # Figure 4
+    
+    # Create dual split plots
+    plot_actual_vs_predicted_80_20()  # Figure 5 (80-20 split)
+    plot_iteration_differences_80_20()  # Figure 6 (80-20 split)
+    plot_iteration_differences_95_5()  # Figure 7 (95-5 split)
+    plot_ml_training_results_95_5()  # Figure 8 (95-5 split)
+    
+    # New plotting functions for dual split visualization
+    plot_actual_vs_predicted_80_20()
+    plot_iteration_differences_80_20()
+    plot_iteration_differences_95_5()
+    plot_ml_training_results_95_5()
     
     print("\n✅ All visualizations completed!")
     print("📁 Data sources:")
@@ -406,27 +414,40 @@ def main():
 
 def plot_csv_results():
     """Plot results from CSV files if they exist"""
-    epoch_results_file = os.path.join(refined_datasets_dir, 'incremental_epoch_results.csv')
-    differences_file = os.path.join(refined_datasets_dir, 'epoch_differences_results.csv')
+    # Try to load dual split results first
+    epoch_80_file = os.path.join(refined_datasets_dir, 'incremental_epoch_results_80_20.csv')
+    epoch_95_file = os.path.join(refined_datasets_dir, 'incremental_epoch_results_95_5.csv')
     
-    if os.path.exists(epoch_results_file):
-        print("📊 Loading epoch results from CSV...")
+    # Check if dual split files exist
+    if os.path.exists(epoch_80_file) and os.path.exists(epoch_95_file):
+        print("📊 Loading dual split results from CSV...")
         try:
-            epoch_df = pd.read_csv(epoch_results_file)
-            plot_epoch_results(epoch_df)
+            epoch_80_df = pd.read_csv(epoch_80_file)
+            epoch_95_df = pd.read_csv(epoch_95_file)
+            plot_epoch_results(epoch_80_df, "80-20 Split")  # Figure 4
         except Exception as e:
-            print(f"❌ Error loading epoch results: {e}")
+            print(f"❌ Error loading dual split results: {e}")
+    else:
+        # Fallback to original single file
+        epoch_results_file = os.path.join(refined_datasets_dir, 'incremental_epoch_results.csv')
+        if os.path.exists(epoch_results_file):
+            print("📊 Loading epoch results from CSV...")
+            try:
+                epoch_df = pd.read_csv(epoch_results_file)
+                plot_epoch_results(epoch_df, "95-5 Split")  # Figure 4
+            except Exception as e:
+                print(f"❌ Error loading epoch results: {e}")
     
     # Note: Figure 5 (plot_epoch_differences) has been removed
     # The key charts from Figure 5 are now integrated into Figure 4
 
-def plot_epoch_results(epoch_df):
+def plot_epoch_results(epoch_df, split_name="Training Results"):
     """Plot epoch training results with enhanced A4-vertical layout"""
     unique_epochs = sorted(epoch_df['Epoch'].unique())
     
     # More vertical layout for A4 compatibility (3 rows, 2 columns)
     fig, axes = plt.subplots(3, 2, figsize=(8.5, 12))  # A4-like proportions
-    fig.suptitle('ML Training Results - Epoch Progression', fontsize=14, fontweight='bold')
+    fig.suptitle(f'ML Training Results - {split_name}', fontsize=14, fontweight='bold')
     
     # MSE progression
     epoch_mse = epoch_df.groupby('Epoch')['MSE'].first()
@@ -528,361 +549,160 @@ def plot_epoch_results(epoch_df):
     plt.tight_layout()
     plt.show(block=False)
 
-def plot_actual_vs_predicted_5x2():
-    """Plot 5x2 grid of actual vs predicted values for each epoch with delta statistics"""
-    print("📊 Creating 5x2 Actual vs Predicted comparison plots...")
-    
-    results_file = os.path.join(refined_datasets_dir, 'incremental_epoch_results.csv')
-    differences_file = os.path.join(refined_datasets_dir, 'epoch_differences_results.csv')
-    
-    if not os.path.exists(results_file):
-        print(f"❌ {results_file} not found! Run the ML script first.")
-        return
-    
-    # Load results data
-    results_df = pd.read_csv(results_file)
-    epochs = sorted(results_df['Epoch'].unique())
-    
-    # Load differences data if available for enhanced titles
-    delta_stats = {}
+def plot_actual_vs_predicted_80_20():
+    """Plot actual vs predicted for 80-20 split (Figure 5)"""
+    epoch_file = os.path.join(refined_datasets_dir, 'incremental_epoch_results_80_20.csv')
+    if os.path.exists(epoch_file):
+        try:
+            df = pd.read_csv(epoch_file)
+            plot_actual_vs_predicted_split(df, "80-20 Split", figure_num=5)
+        except Exception as e:
+            print(f"❌ Error loading 80-20 split data: {e}")
+    else:
+        print("⚠️ 80-20 split data not found, skipping Figure 5")
+
+def plot_iteration_differences_80_20():
+    """Plot iteration differences for 80-20 split (Figure 6)"""
+    differences_file = os.path.join(refined_datasets_dir, 'epoch_differences_results_80_20.csv')
     if os.path.exists(differences_file):
-        diff_df = pd.read_csv(differences_file)
-        # Calculate mean and std for each epoch transition
-        for _, group in diff_df.groupby(['From_Epoch', 'To_Epoch']):
-            from_epoch = int(group['From_Epoch'].iloc[0])
-            to_epoch = int(group['To_Epoch'].iloc[0])
-            mean_delta = group['Mean_Difference'].iloc[0]
-            std_delta = group['Std_Difference'].iloc[0]
-            delta_stats[to_epoch] = {'mean_delta': mean_delta, 'std_delta': std_delta, 'from_epoch': from_epoch}
-      # Create 5x2 subplot grid with A4-friendly dimensions
-    fig, axes = plt.subplots(5, 2, figsize=(8.5, 12))  # A4-like proportions consistent with other figures
-    
-    fig.suptitle('Actual vs Predicted Energy Consumption - Incremental Training Comparison', 
-                 fontsize=14, fontweight='bold')
-    
-    # Flatten axes for easier iteration
-    axes_flat = axes.flatten()
-    
-    # Define distinct colors for each epoch
-    colors = ['blue', 'red', 'green', 'orange', 'purple', 'brown', 'pink', 'gray', 'olive', 'cyan']
-    
-    # Plot each epoch's results
-    for i, epoch in enumerate(epochs):
-        if i >= 10:  # Only plot first 10 epochs (5x2 grid)
-            break
-            
-        epoch_data = results_df[results_df['Epoch'] == epoch]
-        color = colors[i % len(colors)]
-        
-        # Scatter plot: Actual vs Predicted
-        axes_flat[i].scatter(epoch_data['Actual_kW'], epoch_data['Predicted_kW'], 
-                           alpha=0.7, s=25, color=color, label=f'{epoch} epochs')
-        
-        # Perfect prediction line (y=x)
-        min_val = min(epoch_data['Actual_kW'].min(), epoch_data['Predicted_kW'].min())
-        max_val = max(epoch_data['Actual_kW'].max(), epoch_data['Predicted_kW'].max())
-        axes_flat[i].plot([min_val, max_val], [min_val, max_val], 
-                         'k--', linewidth=2, alpha=0.8, label='Perfect Prediction')
-        
-        # Calculate R² and MSE for the subplot
-        mse = epoch_data['MSE'].iloc[0]
-        correlation = np.corrcoef(epoch_data['Actual_kW'], epoch_data['Predicted_kW'])[0, 1]
-        r_squared = correlation ** 2
-        
-        # Enhanced title with delta statistics if available
-        title = f'Epoch {epoch}\nMSE: {mse:.4f}, R²: {r_squared:.3f}'
-        if epoch in delta_stats:
-            mean_delta = delta_stats[epoch]['mean_delta']
-            std_delta = delta_stats[epoch]['std_delta']
-            from_epoch = delta_stats[epoch]['from_epoch']
-            title += f'\nΔ from {from_epoch}: μ={mean_delta:.4f}, σ={std_delta:.4f}'
-        
-        axes_flat[i].set_title(title, fontsize=10)
-        axes_flat[i].set_xlabel('Actual Energy (kW)', fontsize=9)
-        axes_flat[i].set_ylabel('Predicted Energy (kW)', fontsize=9)
-        axes_flat[i].grid(True, alpha=0.3)
-        axes_flat[i].legend(fontsize=7)
-        axes_flat[i].tick_params(labelsize=8)
-        
-        # Set equal aspect ratio for better comparison
-        axes_flat[i].set_aspect('equal', adjustable='box')
-    
-    # Hide unused subplots if there are fewer than 10 epochs
-    for i in range(len(epochs), 10):
-        axes_flat[i].set_visible(False)
-    
-    # Auto-adjust layout with dynamic spacing
-    plt.tight_layout()
-    plt.show(block=False)
-    print("✅ Actual vs Predicted 5x2 plot completed with delta statistics!")
+        try:
+            df = pd.read_csv(differences_file)
+            plot_iteration_differences_split(df, "80-20 Split", figure_num=6)
+        except Exception as e:
+            print(f"❌ Error loading 80-20 differences data: {e}")
+    else:
+        print("⚠️ 80-20 differences data not found, skipping Figure 6")
 
-def plot_iteration_differences_5x2():
-    """Plot 5x2 grid (9 plots) showing differences between consecutive epoch iterations"""
-    print("📊 Creating 5x2 Iteration Differences comparison plots...")
-    
-    results_file = os.path.join(refined_datasets_dir, 'incremental_epoch_results.csv')
-    if not os.path.exists(results_file):
-        print(f"❌ {results_file} not found! Run the ML script first.")
-        return
-    
-    # Load results data
-    results_df = pd.read_csv(results_file)
-    epochs = sorted(results_df['Epoch'].unique())
-    
-    if len(epochs) < 2:
-        print("❌ Need at least 2 epochs to calculate differences!")
-        return
-      # Create 5x2 subplot grid with A4-friendly dimensions
-    fig, axes = plt.subplots(5, 2, figsize=(8.5, 12))  # A4-like proportions consistent with other figures
-    fig.suptitle('Prediction Differences Between Consecutive Training Epochs', 
-                 fontsize=14, fontweight='bold')
-    
-    # Flatten axes for easier iteration
-    axes_flat = axes.flatten()
-    
-    # Calculate and plot differences between consecutive epochs
-    plot_count = 0
-    for i in range(len(epochs) - 1):
-        if plot_count >= 9:  # Maximum 9 plots (leaving one subplot empty for legend/info)
-            break
-            
-        current_epoch = epochs[i]
-        next_epoch = epochs[i + 1]
-        
-        # Get data for both epochs
-        current_data = results_df[results_df['Epoch'] == current_epoch].sort_values('DataPoint')
-        next_data = results_df[results_df['Epoch'] == next_epoch].sort_values('DataPoint')
-        
-        # Calculate prediction differences
-        prediction_diff = next_data['Predicted_kW'].values - current_data['Predicted_kW'].values
-        data_points = current_data['DataPoint'].values
-        
-        # Create difference plot
-        colors = ['red' if diff > 0 else 'blue' for diff in prediction_diff]
-        axes_flat[plot_count].bar(data_points, prediction_diff, color=colors, alpha=0.7, width=0.8)
-        
-        # Statistics
-        mean_diff = np.mean(np.abs(prediction_diff))
-        max_diff = np.max(np.abs(prediction_diff))
-        
-        axes_flat[plot_count].set_title(f'Epoch {current_epoch} → {next_epoch}\n' +
-                                       f'Mean |Δ|: {mean_diff:.4f}, Max |Δ|: {max_diff:.4f}', fontsize=10)
-        axes_flat[plot_count].set_xlabel('Data Point', fontsize=9)
-        axes_flat[plot_count].set_ylabel('Prediction Difference (kW)', fontsize=9)
-        axes_flat[plot_count].grid(True, alpha=0.3)
-        axes_flat[plot_count].axhline(y=0, color='black', linestyle='-', linewidth=1, alpha=0.5)
-        axes_flat[plot_count].tick_params(labelsize=8)
-        
-        plot_count += 1
-    
-    # Use the last subplot for summary information
-    if plot_count < 10:
-        summary_ax = axes_flat[9]  # Last subplot
-        summary_ax.axis('off')
-        
-        # Create summary text with adjusted font size for A4
-        summary_text = "Summary of Iteration Differences:\n\n"
-        summary_text += "🔴 Red bars: Prediction increased\n"
-        summary_text += "🔵 Blue bars: Prediction decreased\n\n"
-        summary_text += "Interpretation:\n"
-        summary_text += "• Large differences indicate model learning\n"
-        summary_text += "• Small differences suggest convergence\n"
-        summary_text += "• Consistent patterns show stable learning\n\n"
-        
-        # Calculate overall statistics
-        all_diffs = []
-        for i in range(len(epochs) - 1):
-            current_data = results_df[results_df['Epoch'] == epochs[i]].sort_values('DataPoint')
-            next_data = results_df[results_df['Epoch'] == epochs[i + 1]].sort_values('DataPoint')
-            diff = next_data['Predicted_kW'].values - current_data['Predicted_kW'].values
-            all_diffs.extend(diff)
-        
-        summary_text += f"Overall Statistics:\n"
-        summary_text += f"Mean |Difference|: {np.mean(np.abs(all_diffs)):.4f} kW\n"
-        summary_text += f"Std Difference: {np.std(all_diffs):.4f} kW\n"
-        summary_text += f"Max |Difference|: {np.max(np.abs(all_diffs)):.4f} kW"
-        
-        summary_ax.text(0.05, 0.95, summary_text, transform=summary_ax.transAxes, 
-                       verticalalignment='top', fontsize=9,
-                       bbox=dict(boxstyle='round', facecolor='lightgray', alpha=0.8))
-    
-    # Hide unused subplots
-    for i in range(plot_count, 9):  # Hide subplots before the summary
-        axes_flat[i].set_visible(False)
-    
-    plt.tight_layout()
-    plt.show(block=False)
-    print("✅ Iteration Differences 5x2 plot completed!")
+def plot_iteration_differences_95_5():
+    """Plot iteration differences for 95-5 split (Figure 7)"""
+    differences_file = os.path.join(refined_datasets_dir, 'epoch_differences_results_95_5.csv')
+    if os.path.exists(differences_file):
+        try:
+            df = pd.read_csv(differences_file)
+            plot_iteration_differences_split(df, "95-5 Split", figure_num=7)
+        except Exception as e:
+            print(f"❌ Error loading 95-5 differences data: {e}")
+    else:
+        print("⚠️ 95-5 differences data not found, skipping Figure 7")
 
-def plot_ml_training_results_5x2():
-    """Recreate the ML training 5x2 grid plots using CSV data with delta statistics"""
-    print("📊 Creating ML Training Results 5x2 plots from CSV data...")
-    
-    results_file = os.path.join(refined_datasets_dir, 'incremental_epoch_results.csv')
-    if not os.path.exists(results_file):
-        print(f"❌ {results_file} not found! Run the ML script first.")
-        return
-    
-    # Load results data
-    results_df = pd.read_csv(results_file)
-    epochs = sorted(results_df['Epoch'].unique())
-    
-    if len(epochs) == 0:
-        print("❌ No epoch data found in CSV file!")
-        return
-    
-    # Calculate delta statistics between consecutive epochs
-    delta_stats = {}
-    for i in range(1, len(epochs)):
-        current_epoch = epochs[i]
-        previous_epoch = epochs[i-1]
-        
-        current_data = results_df[results_df['Epoch'] == current_epoch].sort_values('DataPoint')
-        previous_data = results_df[results_df['Epoch'] == previous_epoch].sort_values('DataPoint')
-        
-        # Calculate prediction differences
-        prediction_diff = current_data['Predicted_kW'].values - previous_data['Predicted_kW'].values
-        mean_delta = np.mean(prediction_diff)
-        std_delta = np.std(prediction_diff)
-        
-        delta_stats[current_epoch] = {
-            'mean_delta': mean_delta,
-            'std_delta': std_delta,
-            'from_epoch': previous_epoch
-        }
-      # Create 5x2 subplot grid with A4-friendly dimensions
-    fig, axes = plt.subplots(5, 2, figsize=(8.5, 12))  # A4-like proportions consistent with other figures
-    
-    fig.suptitle('Incremental Epoch Comparison: ML Training Results\nBOM Weather → House 4 Energy Prediction (Enhanced with Δ Stats)', 
-                fontsize=12, fontweight='bold')
-    
-    # Plot each epoch's results
-    for i, epoch in enumerate(epochs):
-        if i >= 10:  # Only plot first 10 epochs (5x2 grid)
-            break
-            
-        row = i // 2
-        col = i % 2
-        ax = axes[row, col]
-        
-        # Get data for this epoch
-        epoch_data = results_df[results_df['Epoch'] == epoch].sort_values('DataPoint')
-        
-        x_range = range(1, len(epoch_data) + 1)
-        ax.plot(x_range, epoch_data['Actual_kW'], 'b-', label='Actual', linewidth=2)
-        ax.plot(x_range, epoch_data['Predicted_kW'], 'r--', label='Predicted', linewidth=2)
-        
-        # Get statistics
-        mse = epoch_data['MSE'].iloc[0]
-        error_rate = epoch_data['Error_Rate_%'].iloc[0]
-        
-        # Enhanced title with delta statistics
-        title = f"Epochs: {epoch}\nMSE: {mse:.4f}, Error: {error_rate:.1f}%"
-        if epoch in delta_stats:
-            mean_delta = delta_stats[epoch]['mean_delta']
-            std_delta = delta_stats[epoch]['std_delta']
-            from_epoch = delta_stats[epoch]['from_epoch']
-            title += f"\nΔ from {from_epoch}: μ={mean_delta:.4f}, σ={std_delta:.4f}"
-        
-        ax.set_title(title, fontsize=10, fontweight='bold')
-        ax.set_xlabel('Data Point #', fontsize=9)
-        ax.set_ylabel('Power (kW)', fontsize=9)
-        ax.legend(fontsize=8)
-        ax.grid(True, alpha=0.3)
-        ax.tick_params(labelsize=8)
-    
-    # Hide unused subplots if there are fewer than 10 epochs
-    for i in range(len(epochs), 10):
-        row = i // 2
-        col = i % 2
-        axes[row, col].set_visible(False)
-    
-    plt.tight_layout()
-    plt.show(block=False)
-    
-    print("✅ ML Training Results 5x2 plot completed!")
+def plot_ml_training_results_95_5():
+    """Plot ML training results for 95-5 split (Figure 8)"""
+    epoch_file = os.path.join(refined_datasets_dir, 'incremental_epoch_results_95_5.csv')
+    if os.path.exists(epoch_file):
+        try:
+            df = pd.read_csv(epoch_file)
+            plot_ml_training_results_split(df, "95-5 Split", figure_num=8)
+        except Exception as e:
+            print(f"❌ Error loading 95-5 training data: {e}")
+    else:
+        print("⚠️ 95-5 training data not found, skipping Figure 8")
 
-def plot_ml_differences_5x2():
-    """Recreate the ML training differences 5x2 grid plots using CSV data"""
-    print("📊 Creating ML Training Differences 5x2 plots from CSV data...")
+def plot_actual_vs_predicted_split(df, split_name, figure_num):
+    """Generic function to plot actual vs predicted for any split"""
+    print(f"📊 Creating Figure {figure_num}: Actual vs Predicted - {split_name}")
     
-    results_file = os.path.join(refined_datasets_dir, 'incremental_epoch_results.csv')
-    if not os.path.exists(results_file):
-        print(f"❌ {results_file} not found! Run the ML script first.")
-        return
+    unique_epochs = sorted(df['Epoch'].unique())
+    selected_epochs = unique_epochs[:10]  # First 10 epochs
     
-    # Load results data
-    results_df = pd.read_csv(results_file)
-    epochs = sorted(results_df['Epoch'].unique())
+    fig, axes = plt.subplots(2, 5, figsize=(8.5, 12))
+    fig.suptitle(f'Figure {figure_num}: Actual vs Predicted Energy Consumption - {split_name}', fontsize=14, fontweight='bold')
     
-    if len(epochs) < 2:
-        print("❌ Need at least 2 epochs to calculate differences!")
-        return
-      # Set dynamic font scaling for this figure (9 subplots, 16x20 size)
-    set_dynamic_font_params(num_subplots=9, figure_size=(16, 20))
-    
-    # Create 5x2 subplot grid
-    fig, axes = plt.subplots(5, 2, figsize=(16, 20))
-    
-    # Calculate dynamic font sizes
-    fonts = calculate_dynamic_font_sizes(fig.get_size_inches())
-    
-    fig.suptitle('Prediction Differences Between Consecutive Epochs\n(Current Epoch - Previous Epoch) from CSV',
-                fontsize=fonts['title'], fontweight='bold')
-    
-    # Calculate differences between consecutive epochs
-    plot_count = 0
-    for i in range(len(epochs) - 1):
-        if plot_count >= 9:  # Maximum 9 plots
-            break
-            
-        row = plot_count // 2
-        col = plot_count % 2
-        ax = axes[row, col]
+    for i, epoch in enumerate(selected_epochs):
+        row = i // 5
+        col = i % 5
         
-        current_epoch = epochs[i + 1]
-        previous_epoch = epochs[i]
+        epoch_data = df[df['Epoch'] == epoch]
         
-        # Get data for both epochs
-        current_data = results_df[results_df['Epoch'] == current_epoch].sort_values('DataPoint')
-        previous_data = results_df[results_df['Epoch'] == previous_epoch].sort_values('DataPoint')
-          # Calculate prediction differences
-        prediction_diff = current_data['Predicted_kW'].values - previous_data['Predicted_kW'].values
-        
-        x_range = range(1, len(prediction_diff) + 1)
-        ax.plot(x_range, prediction_diff, 'g-', linewidth=2, label='Prediction Difference')
-        ax.axhline(y=0, color='k', linestyle='--', alpha=0.5)
-        
-        # Calculate statistics
-        mean_diff = np.mean(prediction_diff)
-        std_diff = np.std(prediction_diff)
-        
-        ax.set_title(f"Epochs {previous_epoch} → {current_epoch}\nMean Δ: {mean_diff:.4f}, Std: {std_diff:.4f}", 
-                    fontsize=fonts['subtitle'], fontweight='bold')
-        ax.set_xlabel('Data Point #', fontsize=fonts['label'])
-        ax.set_ylabel('Prediction Difference (kW)', fontsize=fonts['label'])
-        ax.legend(fontsize=fonts['legend'])
-        ax.grid(True, alpha=0.3)
-        ax.tick_params(labelsize=fonts['tick'])
-        
-        plot_count += 1
-    
-    # Hide the last subplot since we only have 9 difference plots
-    axes[4, 1].set_visible(False)
-    
-    # Hide any other unused subplots
-    for i in range(plot_count, 9):
-        row = i // 2
-        col = i % 2
-        axes[row, col].set_visible(False)
+        axes[row, col].scatter(epoch_data['Actual_kW'], epoch_data['Predicted_kW'], alpha=0.6, s=30)
+        axes[row, col].plot([epoch_data['Actual_kW'].min(), epoch_data['Actual_kW'].max()], 
+                           [epoch_data['Actual_kW'].min(), epoch_data['Actual_kW'].max()], 'r--', alpha=0.8)
+        axes[row, col].set_title(f'Epoch {epoch}', fontsize=10)
+        axes[row, col].set_xlabel('Actual (kW)', fontsize=8)
+        axes[row, col].set_ylabel('Predicted (kW)', fontsize=8)
+        axes[row, col].grid(True, alpha=0.3)
+        axes[row, col].tick_params(labelsize=7)
     
     plt.tight_layout()
-    plt.show(block=False)
+    plt.show()
+
+def plot_iteration_differences_split(df, split_name, figure_num):
+    """Generic function to plot iteration differences for any split"""
+    print(f"📊 Creating Figure {figure_num}: Prediction Differences - {split_name}")
     
-    # Reset font parameters
-    reset_font_params()
+    unique_epochs = sorted(df['To_Epoch'].unique())
+    selected_epochs = unique_epochs[:10]  # First 10 epoch transitions
     
-    print("✅ ML Training Differences 5x2 plot completed!")
+    fig, axes = plt.subplots(2, 5, figsize=(8.5, 12))
+    fig.suptitle(f'Figure {figure_num}: Prediction Differences Between Epochs - {split_name}', fontsize=14, fontweight='bold')
+    
+    for i, to_epoch in enumerate(selected_epochs):
+        row = i // 5
+        col = i % 5
+        
+        epoch_data = df[df['To_Epoch'] == to_epoch]
+        from_epoch = epoch_data['From_Epoch'].iloc[0]
+        
+        axes[row, col].hist(epoch_data['Prediction_Difference_kW'], bins=15, alpha=0.7, color='skyblue', edgecolor='black')
+        axes[row, col].set_title(f'{from_epoch}→{to_epoch} Epochs', fontsize=10)
+        axes[row, col].set_xlabel('Prediction Δ (kW)', fontsize=8)
+        axes[row, col].set_ylabel('Frequency', fontsize=8)
+        axes[row, col].grid(True, alpha=0.3)
+        axes[row, col].tick_params(labelsize=7)
+        
+        # Add mean and std annotations
+        mean_diff = epoch_data['Mean_Difference_kW'].iloc[0]
+        std_diff = epoch_data['Std_Difference_kW'].iloc[0]
+        axes[row, col].axvline(mean_diff, color='red', linestyle='--', alpha=0.8)
+        axes[row, col].text(0.05, 0.95, f'μ={mean_diff:.3f}', transform=axes[row, col].transAxes, 
+                           fontsize=7, verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+    
+    plt.tight_layout()
+    plt.show()
+
+def plot_ml_training_results_split(df, split_name, figure_num):
+    """Generic function to plot ML training results for any split"""
+    print(f"📊 Creating Figure {figure_num}: ML Training Results - {split_name}")
+    
+    unique_epochs = sorted(df['Epoch'].unique())
+    
+    fig, axes = plt.subplots(2, 5, figsize=(8.5, 12))
+    fig.suptitle(f'Figure {figure_num}: ML Training Results - {split_name}', fontsize=14, fontweight='bold')
+    
+    # Plot various metrics across epochs
+    epoch_mse = df.groupby('Epoch')['MSE'].first()
+    epoch_error_rate = df.groupby('Epoch')['Error_Rate_%'].first()
+    
+    # MSE progression
+    axes[0, 0].plot(epoch_mse.index, epoch_mse.values, 'bo-', linewidth=2, markersize=6)
+    axes[0, 0].set_title('MSE vs Epochs', fontsize=10)
+    axes[0, 0].set_xlabel('Epochs', fontsize=8)
+    axes[0, 0].set_ylabel('MSE', fontsize=8)
+    axes[0, 0].grid(True, alpha=0.3)
+    axes[0, 0].tick_params(labelsize=7)
+    
+    # Error rate progression
+    axes[0, 1].plot(epoch_error_rate.index, epoch_error_rate.values, 'ro-', linewidth=2, markersize=6)
+    axes[0, 1].set_title('Error Rate vs Epochs', fontsize=10)
+    axes[0, 1].set_xlabel('Epochs', fontsize=8)
+    axes[0, 1].set_ylabel('Error Rate (%)', fontsize=8)
+    axes[0, 1].grid(True, alpha=0.3)
+    axes[0, 1].tick_params(labelsize=7)
+    
+    # Error distribution for different epochs
+    for i, epoch in enumerate(unique_epochs[:8]):
+        row = (i + 2) // 5
+        col = (i + 2) % 5
+        
+        epoch_data = df[df['Epoch'] == epoch]
+        axes[row, col].hist(epoch_data['Error_kW'], bins=15, alpha=0.7, color='lightgreen', edgecolor='black')
+        axes[row, col].set_title(f'Epoch {epoch} Errors', fontsize=10)
+        axes[row, col].set_xlabel('Error (kW)', fontsize=8)
+        axes[row, col].set_ylabel('Frequency', fontsize=8)
+        axes[row, col].grid(True, alpha=0.3)
+        axes[row, col].tick_params(labelsize=7)
+    
+    plt.tight_layout()
+    plt.show()
 
 # ====================
 # DYNAMIC FONT SCALING UTILITIES

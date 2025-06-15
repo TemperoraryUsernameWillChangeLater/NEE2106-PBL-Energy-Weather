@@ -281,12 +281,12 @@ def generate_training_data(bom, house4data_processed):
     print(f"Generated {len(x_train_full)} training samples")
     return x_train_full, y_train_full
 
-def create_train_test_split(x_train_full, y_train_full):
-    """Separate test set and training set"""
-    print("Creating train/test split...")
+def create_train_test_split(x_train_full, y_train_full, test_split=0.05):
+    """Separate test set and training set with configurable split ratio"""
+    print(f"Creating train/test split ({int((1-test_split)*100)}-{int(test_split*100)})...")
     
     #separate test set and training set
-    part = int(len(x_train_full) * 0.05)
+    part = int(len(x_train_full) * test_split)
     x_test = x_train_full[-part:]
     y_test = y_train_full[-part:]
     
@@ -580,11 +580,9 @@ def run_incremental_epoch_comparison():
             'epochs': epochs,
             'mse': mse,
             'error_rate': error_rate,
+            'training_time': training_time,
             'predictions': predictions
         })
-        
-        print(f"    ✅ Training time: {training_time:.1f}s | MSE: {mse:.4f} | Error Rate: {error_rate:.2f}%")
-        print(f"    📊 Total epochs trained so far: {epochs} | Efficient incremental training!")
         
         # Save results to CSV after each iteration
         save_epoch_results_to_csv(epochs, y_test, predictions, mse, error_rate, i == 1)  # header only on first iteration
@@ -784,13 +782,12 @@ def main():
     if cuda_available:
         gpus = tf.config.list_physical_devices('GPU')
         print(f"   • GPU device: {gpus[0].name}")
-    print()
-      # Check GPU status
+    print()    # Check GPU status
     check_gpu_status()
     
-    # Run incremental epoch comparison automatically
+    # Run dual split comparison (80-20 and 95-5)
     try:
-        run_incremental_epoch_comparison()
+        run_dual_split_comparison()
         print("\n=== ML Application Completed Successfully ===")
         
     except Exception as e:
@@ -800,3 +797,162 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+def run_dual_split_comparison():
+    """Train models on both 80-20 and 95-5 splits using the same model architecture, storing results separately."""
+    print("=== Dual Split Comparison Study ===")
+    print("🔄 Training on BOTH 80-20 and 95-5 splits")
+    print("📈 Training progression: 50 → 100 → 150 → 200 → 250 → 300 → 350 → 400 → 450 → 500 epochs")
+    print("📊 Separate CSV files will be generated for each split\n")
+
+    # Load data
+    bom, house4data_processed = load_processed_data()
+    x_train_full, y_train_full = generate_training_data(bom, house4data_processed)
+    
+    # Epoch increments
+    epoch_tests = list(range(50, 501, 50))  # [50, 100, ..., 500]
+    
+    # Train on 80-20 split
+    print("🎯 PHASE 1: Training on 80-20 split")
+    print("=" * 50)
+    x_train_80, x_test_80, y_train_80, y_test_80 = create_train_test_split(x_train_full, y_train_full, test_split=0.20)
+    results_80 = train_incremental_on_split(x_train_80, x_test_80, y_train_80, y_test_80, epoch_tests, "80-20")
+    print(f"Results (80-20 split) saved to: Refined Datasets/incremental_epoch_results_80_20.csv")
+    print(f"Differences (80-20 split) saved to: Refined Datasets/epoch_differences_results_80_20.csv")
+    
+    # Train on 95-5 split
+    print("\n🎯 PHASE 2: Training on 95-5 split")
+    print("=" * 50)
+    x_train_95, x_test_95, y_train_95, y_test_95 = create_train_test_split(x_train_full, y_train_full, test_split=0.05)
+    results_95 = train_incremental_on_split(x_train_95, x_test_95, y_train_95, y_test_95, epoch_tests, "95-5")
+    print(f"Results (95-5 split) saved to: Refined Datasets/incremental_epoch_results_95_5.csv")
+    print(f"Differences (95-5 split) saved to: Refined Datasets/epoch_differences_results_95_5.csv")
+    
+    # Save comparison summary
+    save_dual_split_summary(results_80, results_95)
+    
+    print("\n✅ Dual split comparison completed!")
+    print("📁 Generated files:")
+    print("   • incremental_epoch_results_80_20.csv (80-20 split detailed results)")
+    print("   • epoch_differences_results_80_20.csv (80-20 split differences)")
+    print("   • incremental_epoch_results_95_5.csv (95-5 split detailed results)")
+    print("   • epoch_differences_results_95_5.csv (95-5 split differences)")
+    print("   • dual_split_comparison_summary.csv (performance comparison)")
+
+def train_incremental_on_split(x_train, x_test, y_train, y_test, epoch_tests, split_name):
+    """Train a single model incrementally on given train/test split"""
+    results = []
+    detailed_results = []
+    differences_results = []
+    
+    # Create and train model incrementally
+    model = create_rnn_model()
+    prev_epochs = 0
+    prev_predictions = None
+    
+    for i, epochs in enumerate(epoch_tests, 1):
+        additional_epochs = epochs - prev_epochs
+        print(f"[{i}/{len(epoch_tests)}] 🧠 Training from {prev_epochs} to {epochs} epochs (+{additional_epochs} new epochs)...")
+        
+        import time
+        start_time = time.time()
+        history = model.fit(x_train, y_train, batch_size=1, initial_epoch=prev_epochs, epochs=epochs, verbose=0)
+        training_time = time.time() - start_time
+        
+        prev_epochs = epochs
+        
+        # Evaluate
+        mse = model.evaluate(x_test, y_test, verbose=0)
+        predictions = model.predict(x_test, verbose=0)
+        
+        # Calculate error rate
+        errors = [predictions[j][0][0] - y_test[j] for j in range(len(predictions))]
+        error_rate = np.mean(np.abs(errors)) / np.mean(y_test) * 100
+        
+        results.append({
+            'epochs': epochs,
+            'mse': mse,
+            'error_rate': error_rate,
+            'training_time': training_time,
+            'predictions': predictions
+        })
+        
+        # Store detailed results for CSV
+        for j in range(len(predictions)):
+            detailed_results.append({
+                'Epoch': epochs,
+                'DataPoint': j + 1,
+                'Actual_kW': y_test[j],
+                'Predicted_kW': predictions[j][0][0],
+                'Error_kW': predictions[j][0][0] - y_test[j],
+                'MSE': mse,
+                'Error_Rate_%': error_rate
+            })
+        
+        # Calculate differences from previous epoch
+        if prev_predictions is not None:
+            pred_diffs = [predictions[j][0][0] - prev_predictions[j][0][0] for j in range(len(predictions))]
+            mean_diff = np.mean(pred_diffs)
+            std_diff = np.std(pred_diffs)
+            
+            for j in range(len(predictions)):
+                differences_results.append({
+                    'From_Epoch': epochs - 50,
+                    'To_Epoch': epochs,
+                    'DataPoint': j + 1,
+                    'Previous_Prediction_kW': prev_predictions[j][0][0],
+                    'Current_Prediction_kW': predictions[j][0][0],
+                    'Prediction_Difference_kW': pred_diffs[j],
+                    'Mean_Difference_kW': mean_diff,
+                    'Std_Difference_kW': std_diff
+                })
+        
+        prev_predictions = predictions.copy()
+        print(f"    MSE: {mse:.4f}, Error Rate: {error_rate:.2f}%, Time: {training_time:.1f}s")
+    
+    # Save CSV files
+    save_split_results(detailed_results, differences_results, split_name)
+    
+    return results
+
+def save_split_results(detailed_results, differences_results, split_name):
+    """Save results for a specific split to CSV files"""
+    import os
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    refined_datasets_dir = os.path.join(script_dir, 'Refined Datasets')
+    
+    # Save detailed results
+    detailed_df = pd.DataFrame(detailed_results)
+    detailed_file = os.path.join(refined_datasets_dir, f'incremental_epoch_results_{split_name.replace("-", "_")}.csv')
+    detailed_df.to_csv(detailed_file, index=False)
+    print(f"    💾 Saved: {detailed_file}")
+    
+    # Save differences results
+    if differences_results:
+        differences_df = pd.DataFrame(differences_results)
+        differences_file = os.path.join(refined_datasets_dir, f'epoch_differences_results_{split_name.replace("-", "_")}.csv')
+        differences_df.to_csv(differences_file, index=False)
+        print(f"    💾 Saved: {differences_file}")
+
+def save_dual_split_summary(results_80, results_95):
+    """Save comparison summary between both splits"""
+    import os
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    refined_datasets_dir = os.path.join(script_dir, 'Refined Datasets')
+    
+    summary_data = []
+    for i, (r80, r95) in enumerate(zip(results_80, results_95)):
+        summary_data.append({
+            'Epochs': r80['epochs'],
+            'MSE_80_20': r80['mse'],
+            'MSE_95_5': r95['mse'],
+            'Error_Rate_80_20_%': r80['error_rate'],
+            'Error_Rate_95_5_%': r95['error_rate'],
+            'MSE_Difference': r95['mse'] - r80['mse'],
+            'Error_Rate_Difference_%': r95['error_rate'] - r80['error_rate']
+        })
+    
+    summary_df = pd.DataFrame(summary_data)
+    summary_file = os.path.join(refined_datasets_dir, 'dual_split_comparison_summary.csv')
+    summary_df.to_csv(summary_file, index=False)
+    print(f"    💾 Saved: {summary_file}")
