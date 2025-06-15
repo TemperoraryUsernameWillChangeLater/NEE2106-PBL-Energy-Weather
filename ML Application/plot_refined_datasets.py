@@ -351,7 +351,7 @@ def main():
     print("   1. Weather data analysis from .dat files")
     print("   2. Energy consumption analysis from .dat files") 
     print("   3. Weather-energy correlation analysis")
-    print("   4. ML training results analysis from CSV files")
+    print("   4. ML training results analysis from CSV files (enhanced with Figure 5 content)")
     print("   5. ML training progression (reproduces ML.py plots from CSV data)")
     print("   6. Prediction differences between epochs")
     print("   7. Actual vs predicted comparisons")
@@ -417,13 +417,8 @@ def plot_csv_results():
         except Exception as e:
             print(f"❌ Error loading epoch results: {e}")
     
-    if os.path.exists(differences_file):
-        print("📊 Loading epoch differences from CSV...")
-        try:
-            diff_df = pd.read_csv(differences_file)
-            plot_epoch_differences(diff_df)
-        except Exception as e:
-            print(f"❌ Error loading epoch differences: {e}")
+    # Note: Figure 5 (plot_epoch_differences) has been removed
+    # The key charts from Figure 5 are now integrated into Figure 4
 
 def plot_epoch_results(epoch_df):
     """Plot epoch training results with enhanced A4-vertical layout"""
@@ -467,8 +462,7 @@ def plot_epoch_results(epoch_df):
     axes[1, 0].set_ylabel('Predicted Power (kW)')
     axes[1, 0].legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=7)
     axes[1, 0].grid(True, alpha=0.3)
-    
-    # Error distribution for final epoch
+      # Error distribution for final epoch
     final_epoch_data = epoch_df[epoch_df['Epoch'] == unique_epochs[-1]]
     axes[1, 1].hist(final_epoch_data['Error_kW'], bins=30, alpha=0.7, color='purple')
     axes[1, 1].set_title(f'Error Distribution (Epoch {unique_epochs[-1]})', fontsize=12)
@@ -476,117 +470,60 @@ def plot_epoch_results(epoch_df):
     axes[1, 1].set_ylabel('Frequency')
     axes[1, 1].grid(True, alpha=0.3)
     
-    # Average error per epoch
-    avg_abs_error = epoch_df.groupby('Epoch')['Error_kW'].apply(lambda x: np.abs(x).mean())
-    axes[2, 0].plot(avg_abs_error.index, avg_abs_error.values, 'go-', linewidth=2, markersize=6)
-    axes[2, 0].set_title('Average Absolute Error vs Epochs', fontsize=12)
-    axes[2, 0].set_xlabel('Epochs')
-    axes[2, 0].set_ylabel('Average Absolute Error (kW)')
-    axes[2, 0].grid(True, alpha=0.3)
-    
-    # Prediction spread by epoch
-    epoch_std = epoch_df.groupby('Epoch')['Predicted_kW'].std()
-    axes[2, 1].plot(epoch_std.index, epoch_std.values, 'mo-', linewidth=2, markersize=6)
-    axes[2, 1].set_title('Prediction Variability vs Epochs', fontsize=12)
-    axes[2, 1].set_xlabel('Epochs')
-    axes[2, 1].set_ylabel('Prediction Std Deviation (kW)')
-    axes[2, 1].grid(True, alpha=0.3)
-    
-    plt.tight_layout()
-    plt.show(block=False)
-
-def plot_epoch_differences(diff_df):
-    """Plot epoch difference analysis with A4-vertical layout"""
-    unique_transitions = diff_df[['From_Epoch', 'To_Epoch']].drop_duplicates()
-    
-    # More vertical layout for A4 compatibility (3 rows, 2 columns)
-    fig, axes = plt.subplots(3, 2, figsize=(8.5, 12))  # A4-like proportions
-    fig.suptitle('Epoch-to-Epoch Prediction Changes Analysis', fontsize=14, fontweight='bold')
-    
-    # Mean differences across epoch transitions
-    mean_diffs = diff_df.groupby(['From_Epoch', 'To_Epoch'])['Mean_Difference'].first()
-    transition_labels = [f"{int(idx[0])}-{int(idx[1])}" for idx in mean_diffs.index]
-    
-    axes[0, 0].bar(range(len(mean_diffs)), mean_diffs.values, alpha=0.7, color='skyblue')
-    axes[0, 0].set_title('Mean Prediction Differences', fontsize=12)
-    axes[0, 0].set_xlabel('Epoch Transition')
-    axes[0, 0].set_ylabel('Mean Difference (kW)')
-    axes[0, 0].set_xticks(range(len(transition_labels)))
-    axes[0, 0].set_xticklabels(transition_labels, rotation=45, fontsize=9)
-    axes[0, 0].grid(True, alpha=0.3)
-    
-    # Standard deviations of differences
-    std_diffs = diff_df.groupby(['From_Epoch', 'To_Epoch'])['Std_Difference'].first()
-    
-    axes[0, 1].bar(range(len(std_diffs)), std_diffs.values, alpha=0.7, color='lightcoral')
-    axes[0, 1].set_title('Std Dev of Changes', fontsize=12)
-    axes[0, 1].set_xlabel('Epoch Transition')
-    axes[0, 1].set_ylabel('Std Deviation (kW)')
-    axes[0, 1].set_xticks(range(len(transition_labels)))
-    axes[0, 1].set_xticklabels(transition_labels, rotation=45, fontsize=9)
-    axes[0, 1].grid(True, alpha=0.3)
-    
-    # Distribution of prediction differences for each transition
-    colors = ['blue', 'red', 'green', 'orange', 'purple', 'brown', 'pink', 'gray', 'olive']
-    
-    for i, (from_epoch, to_epoch) in enumerate(unique_transitions.values):
-        transition_data = diff_df[(diff_df['From_Epoch'] == from_epoch) & 
-                                 (diff_df['To_Epoch'] == to_epoch)]
-        color = colors[i % len(colors)]
-        axes[1, 0].hist(transition_data['Prediction_Difference'], bins=20, alpha=0.6, 
-                       label=f'{int(from_epoch)}-{int(to_epoch)}', color=color)
-    
-    axes[1, 0].set_title('Distribution of Individual Changes', fontsize=12)
-    axes[1, 0].set_xlabel('Prediction Difference (kW)')
-    axes[1, 0].set_ylabel('Frequency')
-    axes[1, 0].legend(fontsize=7)
-    axes[1, 0].grid(True, alpha=0.3)
-    
-    # Convergence pattern - showing how differences decrease over time
-    mean_abs_diffs = diff_df.groupby(['From_Epoch', 'To_Epoch'])['Prediction_Difference'].apply(lambda x: np.abs(x).mean())
-    
-    axes[1, 1].plot(range(len(mean_abs_diffs)), mean_abs_diffs.values, 'go-', linewidth=2, markersize=6)
-    axes[1, 1].set_title('Average Absolute Change', fontsize=12)
-    axes[1, 1].set_xlabel('Epoch Transition')
-    axes[1, 1].set_ylabel('Average Absolute Change (kW)')
-    axes[1, 1].set_xticks(range(len(transition_labels)))
-    axes[1, 1].set_xticklabels(transition_labels, rotation=45, fontsize=9)
-    axes[1, 1].grid(True, alpha=0.3)
-    
-    # Prediction stability (difference variance analysis)
-    var_diffs = diff_df.groupby(['From_Epoch', 'To_Epoch'])['Prediction_Difference'].var()
-    
-    axes[2, 0].plot(range(len(var_diffs)), var_diffs.values, 'mo-', linewidth=2, markersize=6)
-    axes[2, 0].set_title('Prediction Change Variance', fontsize=12)
-    axes[2, 0].set_xlabel('Epoch Transition')
-    axes[2, 0].set_ylabel('Variance (kW²)')
-    axes[2, 0].set_xticks(range(len(transition_labels)))
-    axes[2, 0].set_xticklabels(transition_labels, rotation=45, fontsize=9)
-    axes[2, 0].grid(True, alpha=0.3)
-    
-    # Summary statistics table visualization
-    summary_stats = []
-    for from_epoch, to_epoch in unique_transitions.values:
-        transition_data = diff_df[(diff_df['From_Epoch'] == from_epoch) & 
-                                 (diff_df['To_Epoch'] == to_epoch)]
-        stats = {
-            'Transition': f'{int(from_epoch)}-{int(to_epoch)}',
-            'Mean': transition_data['Prediction_Difference'].mean(),
-            'Std': transition_data['Prediction_Difference'].std(),
-            'Min': transition_data['Prediction_Difference'].min(),
-            'Max': transition_data['Prediction_Difference'].max()
-        }
-        summary_stats.append(stats)
-    
-    # Create text summary in the final subplot
-    axes[2, 1].axis('off')
-    axes[2, 1].set_title('Summary Statistics', fontsize=12)    
-    table_text = "Transition | Mean | Std | Min | Max\n" + "-" * 35 + "\n"
-    for stat in summary_stats:
-        table_text += f"{stat['Transition']:>8} | {stat['Mean']:>5.3f} | {stat['Std']:>4.3f} | {stat['Min']:>5.3f} | {stat['Max']:>5.3f}\n"
-    
-    axes[2, 1].text(0.05, 0.95, table_text, transform=axes[2, 1].transAxes, fontsize=9, 
-                   verticalalignment='top', fontfamily='monospace')
+    # Mean prediction differences (moved from Figure 5)
+    # Need to calculate differences between consecutive epochs
+    if len(unique_epochs) > 1:
+        mean_diffs = []
+        transition_labels = []
+        for i in range(len(unique_epochs) - 1):
+            current_epoch = unique_epochs[i + 1]
+            previous_epoch = unique_epochs[i]
+            
+            current_data = epoch_df[epoch_df['Epoch'] == current_epoch].sort_values('DataPoint')
+            previous_data = epoch_df[epoch_df['Epoch'] == previous_epoch].sort_values('DataPoint')
+            
+            # Calculate prediction differences
+            prediction_diff = current_data['Predicted_kW'].values - previous_data['Predicted_kW'].values
+            mean_diff = np.mean(prediction_diff)
+            mean_diffs.append(mean_diff)
+            transition_labels.append(f"{previous_epoch}-{current_epoch}")
+        
+        axes[2, 0].bar(range(len(mean_diffs)), mean_diffs, alpha=0.7, color='skyblue')
+        axes[2, 0].set_title('Mean Prediction Differences', fontsize=12)
+        axes[2, 0].set_xlabel('Epoch Transition')
+        axes[2, 0].set_ylabel('Mean Difference (kW)')
+        axes[2, 0].set_xticks(range(len(transition_labels)))
+        axes[2, 0].set_xticklabels(transition_labels, rotation=45, fontsize=9)
+        axes[2, 0].grid(True, alpha=0.3)
+          # Standard deviations of differences (moved from Figure 5)
+        std_diffs = []
+        for i in range(len(unique_epochs) - 1):
+            current_epoch = unique_epochs[i + 1]
+            previous_epoch = unique_epochs[i]
+            
+            current_data = epoch_df[epoch_df['Epoch'] == current_epoch].sort_values('DataPoint')
+            previous_data = epoch_df[epoch_df['Epoch'] == previous_epoch].sort_values('DataPoint')
+            
+            # Calculate prediction differences
+            prediction_diff = current_data['Predicted_kW'].values - previous_data['Predicted_kW'].values
+            std_diff = np.std(prediction_diff)
+            std_diffs.append(std_diff)
+        
+        axes[2, 1].bar(range(len(std_diffs)), std_diffs, alpha=0.7, color='lightcoral')
+        axes[2, 1].set_title('Std Dev of Changes', fontsize=12)
+        axes[2, 1].set_xlabel('Epoch Transition')
+        axes[2, 1].set_ylabel('Std Deviation (kW)')
+        axes[2, 1].set_xticks(range(len(transition_labels)))
+        axes[2, 1].set_xticklabels(transition_labels, rotation=45, fontsize=9)
+        axes[2, 1].grid(True, alpha=0.3)
+    else:
+        # If only one epoch, show placeholder message
+        axes[2, 0].text(0.5, 0.5, 'Need at least 2 epochs\nfor difference analysis', 
+                       transform=axes[2, 0].transAxes, ha='center', va='center', fontsize=12)
+        axes[2, 0].set_title('Mean Prediction Differences', fontsize=12)
+        axes[2, 1].text(0.5, 0.5, 'Need at least 2 epochs\nfor difference analysis', 
+                       transform=axes[2, 1].transAxes, ha='center', va='center', fontsize=12)
+        axes[2, 1].set_title('Std Dev of Changes', fontsize=12)
     
     plt.tight_layout()
     plt.show(block=False)
@@ -617,9 +554,8 @@ def plot_actual_vs_predicted_5x2():
             mean_delta = group['Mean_Difference'].iloc[0]
             std_delta = group['Std_Difference'].iloc[0]
             delta_stats[to_epoch] = {'mean_delta': mean_delta, 'std_delta': std_delta, 'from_epoch': from_epoch}
-    
-    # Create 5x2 subplot grid with A4-friendly dimensions
-    fig, axes = plt.subplots(5, 2, figsize=(8.5, 14))  # Taller and narrower for A4
+      # Create 5x2 subplot grid with A4-friendly dimensions
+    fig, axes = plt.subplots(5, 2, figsize=(8.5, 12))  # A4-like proportions consistent with other figures
     
     fig.suptitle('Actual vs Predicted Energy Consumption - Incremental Training Comparison', 
                  fontsize=14, fontweight='bold')
@@ -696,9 +632,8 @@ def plot_iteration_differences_5x2():
     if len(epochs) < 2:
         print("❌ Need at least 2 epochs to calculate differences!")
         return
-    
-    # Create 5x2 subplot grid with A4-friendly dimensions
-    fig, axes = plt.subplots(5, 2, figsize=(8.5, 14))  # Taller and narrower for A4
+      # Create 5x2 subplot grid with A4-friendly dimensions
+    fig, axes = plt.subplots(5, 2, figsize=(8.5, 12))  # A4-like proportions consistent with other figures
     fig.suptitle('Prediction Differences Between Consecutive Training Epochs', 
                  fontsize=14, fontweight='bold')
     
@@ -815,9 +750,8 @@ def plot_ml_training_results_5x2():
             'std_delta': std_delta,
             'from_epoch': previous_epoch
         }
-    
-    # Create 5x2 subplot grid with A4-friendly dimensions
-    fig, axes = plt.subplots(5, 2, figsize=(8.5, 14))  # Taller and narrower for A4
+      # Create 5x2 subplot grid with A4-friendly dimensions
+    fig, axes = plt.subplots(5, 2, figsize=(8.5, 12))  # A4-like proportions consistent with other figures
     
     fig.suptitle('Incremental Epoch Comparison: ML Training Results\nBOM Weather → House 4 Energy Prediction (Enhanced with Δ Stats)', 
                 fontsize=12, fontweight='bold')
