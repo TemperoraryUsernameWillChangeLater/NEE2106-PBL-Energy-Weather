@@ -759,45 +759,6 @@ def save_difference_results_to_csv(epoch_from, epoch_to, prediction_diff, mean_d
         diff_df.to_csv(csv_file, mode='a', index=False, header=False)
         print(f"    📁 Appended difference: {epoch_from}→{epoch_to} epochs")
 
-def main():
-    """Main function to run the complete ML application"""
-    print("=== TensorFlow ML Application: BOM Weather → House 4 Energy Prediction ===")
-    print("Using 4 temperature features (Min, Max, 9am, 3pm) to predict energy consumption")
-    print()
-    
-    # Display file organization
-    print("📁 File Organization:")
-    print(f"   • Input data: {datapath}")
-    print(f"   • Output data: {refined_datasets_dir}")
-    print(f"   • BOM processed data: {bomfile}")
-    print(f"   • House 4 processed data: {house4file}")
-    print()
-    
-    # Display current configuration
-    print("🖥️  Current Configuration:")
-    print(f"   • TensorFlow version: {tf.__version__}")
-    print(f"   • CUDA available: {cuda_available}")
-    print(f"   • Mixed precision: {mixed_precision_enabled}")
-    print(f"   • GPU acceleration: {'✅ ENABLED' if cuda_available else '❌ DISABLED'}")
-    if cuda_available:
-        gpus = tf.config.list_physical_devices('GPU')
-        print(f"   • GPU device: {gpus[0].name}")
-    print()    # Check GPU status
-    check_gpu_status()
-    
-    # Run dual split comparison (80-20 and 95-5)
-    try:
-        run_dual_split_comparison()
-        print("\n=== ML Application Completed Successfully ===")
-        
-    except Exception as e:
-        print(f"Error occurred: {str(e)}")
-        import traceback
-        traceback.print_exc()
-
-if __name__ == "__main__":
-    main()
-
 def run_dual_split_comparison():
     """Train models on both 80-20 and 95-5 splits using the same model architecture, storing results separately."""
     print("=== Dual Split Comparison Study ===")
@@ -817,16 +778,12 @@ def run_dual_split_comparison():
     print("=" * 50)
     x_train_80, x_test_80, y_train_80, y_test_80 = create_train_test_split(x_train_full, y_train_full, test_split=0.20)
     results_80 = train_incremental_on_split(x_train_80, x_test_80, y_train_80, y_test_80, epoch_tests, "80-20")
-    print(f"Results (80-20 split) saved to: Refined Datasets/incremental_epoch_results_80_20.csv")
-    print(f"Differences (80-20 split) saved to: Refined Datasets/epoch_differences_results_80_20.csv")
     
     # Train on 95-5 split
     print("\n🎯 PHASE 2: Training on 95-5 split")
     print("=" * 50)
     x_train_95, x_test_95, y_train_95, y_test_95 = create_train_test_split(x_train_full, y_train_full, test_split=0.05)
     results_95 = train_incremental_on_split(x_train_95, x_test_95, y_train_95, y_test_95, epoch_tests, "95-5")
-    print(f"Results (95-5 split) saved to: Refined Datasets/incremental_epoch_results_95_5.csv")
-    print(f"Differences (95-5 split) saved to: Refined Datasets/epoch_differences_results_95_5.csv")
     
     # Save comparison summary
     save_dual_split_summary(results_80, results_95)
@@ -956,3 +913,42 @@ def save_dual_split_summary(results_80, results_95):
     summary_file = os.path.join(refined_datasets_dir, 'dual_split_comparison_summary.csv')
     summary_df.to_csv(summary_file, index=False)
     print(f"    💾 Saved: {summary_file}")
+
+def main():
+    """Main function to run the complete ML application"""
+    print("=== TensorFlow ML Application: BOM Weather → House 4 Energy Prediction ===")
+    print("Using 4 temperature features (Min, Max, 9am, 3pm) to predict energy consumption")
+    print()
+    
+    # Display file organization
+    print("📁 File Organization:")
+    print(f"   • Input data: {datapath}")
+    print(f"   • Output data: {refined_datasets_dir}")
+    print(f"   • BOM processed data: {bomfile}")
+    print(f"   • House 4 processed data: {house4file}")
+    print()
+    
+    # Display current configuration
+    print("🖥️  Current Configuration:")
+    print(f"   • TensorFlow version: {tf.__version__}")
+    print(f"   • CUDA available: {cuda_available}")
+    print(f"   • Mixed precision: {mixed_precision_enabled}")
+    print(f"   • GPU acceleration: {'✅ ENABLED' if cuda_available else '❌ DISABLED'}")
+    if cuda_available:
+        gpus = tf.config.list_physical_devices('GPU')
+        print(f"   • GPU device: {gpus[0].name}")
+    print()    # Check GPU status
+    check_gpu_status()
+    
+    # Run dual split comparison (80-20 and 95-5)
+    try:
+        run_dual_split_comparison()
+        print("\n=== ML Application Completed Successfully ===")
+        
+    except Exception as e:
+        print(f"Error occurred: {str(e)}")
+        import traceback
+        traceback.print_exc()
+
+if __name__ == "__main__":
+    main()
