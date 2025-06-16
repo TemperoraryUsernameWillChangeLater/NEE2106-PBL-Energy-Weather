@@ -10,7 +10,7 @@ import os # Used for relative filepaths
 
 data_dict = {}
 months_list = ["24-05", "24-06", "24-07", "24-08", "24-09", "24-10", "24-11", "24-12", "25-01", "25-02", "25-03", "25-04"]
-csv_folder = os.path.join(os.path.dirname(__file__), "..", "Datasets") # Relative file paths used
+csv_folder = os.path.join(os.path.dirname(__file__), "Datasets") # Path to the datasets folder relative to this script
 
 def normalize_column_name(col_name): # Clean up column names by removing encoding artifacts and converting to lowercase
     """Handle encoding artifacts in column names"""

@@ -586,38 +586,10 @@ def plot_iteration_differences_5x2():
         axes_flat[plot_count].axhline(y=0, color='black', linestyle='-', linewidth=1, alpha=0.5)
         axes_flat[plot_count].tick_params(labelsize=8)
         
-        plot_count += 1
-    
-    # Use the last subplot for summary information
-    if plot_count < 10:
-        summary_ax = axes_flat[9]  # Last subplot
-        summary_ax.axis('off')
-        
-        # Create summary text with adjusted font size for A4
-        summary_text = "Summary of Iteration Differences:\n\n"
-        summary_text += "🔴 Red bars: Prediction increased\n"
-        summary_text += "🔵 Blue bars: Prediction decreased\n\n"
-        summary_text += "Interpretation:\n"
-        summary_text += "• Large differences indicate model learning\n"
-        summary_text += "• Small differences suggest convergence\n"
-        summary_text += "• Consistent patterns show stable learning\n\n"
-        
-        # Calculate overall statistics
-        all_diffs = []
-        for i in range(len(epochs) - 1):
-            current_data = results_df[results_df['Epoch'] == epochs[i]].sort_values('DataPoint')
-            next_data = results_df[results_df['Epoch'] == epochs[i + 1]].sort_values('DataPoint')
-            diff = next_data['Predicted_kW'].values - current_data['Predicted_kW'].values
-            all_diffs.extend(diff)
-        
-        summary_text += f"Overall Statistics:\n"
-        summary_text += f"Mean |Difference|: {np.mean(np.abs(all_diffs)):.4f} kW\n"
-        summary_text += f"Std Difference: {np.std(all_diffs):.4f} kW\n"
-        summary_text += f"Max |Difference|: {np.max(np.abs(all_diffs)):.4f} kW"
-        
-        summary_ax.text(0.05, 0.95, summary_text, transform=summary_ax.transAxes, 
-                       verticalalignment='top', fontsize=9,
-                       bbox=dict(boxstyle='round', facecolor='lightgray', alpha=0.8))
+        plot_count += 1    
+    # Hide any unused subplots
+    for j in range(plot_count, 10):
+        axes_flat[j].axis('off')
     
     # Hide unused subplots
     for i in range(plot_count, 9):  # Hide subplots before the summary
@@ -715,8 +687,8 @@ def plot_ml_training_results_5x2():
     print("✅ ML Training Results 5x2 plot completed!")
 
 def plot_figure_7_prediction_vs_actual_differences():
-    """Figure 7: 5x2 bar plot showing difference (Predicted - Actual) for each epoch interval"""
-    print("📊 Creating Figure 7: 5x2 Prediction - Actual Differences by Epoch...")
+    """Create bar plot showing difference (Predicted - Actual) for each epoch interval"""
+    print("📊 Creating Prediction - Actual Differences by Epoch...")
     
     results_file = os.path.join(refined_datasets_dir, 'incremental_epoch_results.csv')
     if not os.path.exists(results_file):
@@ -730,10 +702,9 @@ def plot_figure_7_prediction_vs_actual_differences():
     if len(epochs) == 0:
         print("❌ No epoch data found in CSV file!")
         return
-    
-    # Create 5x2 subplot grid with A4-friendly dimensions
+      # Create 5x2 subplot grid with A4-friendly dimensions
     fig, axes = plt.subplots(5, 2, figsize=(8.5, 12))  # A4-like proportions consistent with other figures
-    fig.suptitle('Figure 7: Prediction - Actual Differences (5x2 Bar Plot)', 
+    fig.suptitle('Prediction - Actual Differences by Training Epoch', 
                  fontsize=14, fontweight='bold')
     
     # Flatten axes for easier iteration
@@ -796,7 +767,7 @@ def plot_figure_7_prediction_vs_actual_differences():
     plt.show(block=False)
     
     # Print summary statistics
-    print("✅ Figure 7 completed!")
+    print("✅ Prediction - Actual Differences plot completed!")
     print("📊 Summary of Prediction - Actual Analysis:")
     
     # Calculate overall statistics across all epochs
