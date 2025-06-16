@@ -282,15 +282,15 @@ def generate_training_data(bom, house4data_processed):
     return x_train_full, y_train_full
 
 def create_train_test_split(x_train_full, y_train_full):
-    """Separate test set and training set with 80-20 split"""
-    print("Creating train/test split (80-20)...")
+    """Separate test set and training set with 95-5 split"""
+    print("Creating train/test split (95-5)...")
     
     #separate test set and training set
-    part = int(len(x_train_full) * 0.20)  # 20% for testing
+    part = int(len(x_train_full) * 0.05)  # 5% for testing
     x_test = x_train_full[-part:]
     y_test = y_train_full[-part:]
     
-    x_train = x_train_full[:-part]  # 80% for training
+    x_train = x_train_full[:-part]  # 95% for training
     y_train = y_train_full[:-part]
     
     x_test = np.array(x_test)
@@ -361,9 +361,9 @@ def create_rnn_model():
     return model
 
 def run_incremental_epoch_comparison():
-    """Train a single model incrementally: 50, 100, ..., 500 epochs with 80-20 split, storing results after each increment, and automatically generate plots."""
+    """Train a single model incrementally: 50, 100, ..., 500 epochs with 95-5 split, storing results after each increment, and automatically generate plots."""
     print("=== Incremental Epoch Comparison Study ===")
-    print("🚀 EFFICIENT TRAINING: Single model trained incrementally (80-20 split)")
+    print("🚀 EFFICIENT TRAINING: Single model trained incrementally (95-5 split)")
     print("📈 Training progression: 50 → 100 → 150 → 200 → 250 → 300 → 350 → 400 → 450 → 500 epochs")
     print("💡 Total epochs: 500 (not 1000+ like before!)")
     print("⚡ Each step adds only 50 more epochs to existing model")
