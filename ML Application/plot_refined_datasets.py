@@ -349,10 +349,10 @@ def main():
     print("="*60)
     print("📊 This script creates multiple visualization sets:")
     print("   1. Weather data analysis from .dat files")
-    print("   2. Energy consumption analysis from .dat files") 
+    print("   2. Energy consumption analysis from .dat files")
     print("   3. Weather-energy correlation analysis")
     print("   4. ML training results analysis from CSV files (enhanced with Figure 5 content)")
-    print("   5. ML training progression (reproduces ML.py plots from CSV data)")
+    print("   5. ML training progression (reproduces ML.py plots from CSV data)")  
     print("   6. Prediction differences between epochs")
     print("   7. Actual vs predicted comparisons")
     print("   8. Figure 7: Prediction vs Actual difference analysis")
@@ -379,9 +379,10 @@ def main():
     plot_correlation_analysis(bom_df, house4_df)
       # Try to load and display CSV files if they exist
     plot_csv_results()
-      # Create new 5x2 grid plots for ML results (reproduces ML.py plots from CSV data)
-    plot_iteration_differences_5x2()
+    
+    # Create new 5x2 grid plots for ML results (reproduces ML.py plots from CSV data)
     plot_ml_training_results_5x2()
+    plot_iteration_differences_5x2()
     plot_figure_7_prediction_vs_actual_differences()
     
     print("\n✅ All visualizations completed!")
