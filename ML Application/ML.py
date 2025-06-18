@@ -391,9 +391,9 @@ def run_incremental_epoch_comparison():
         
         # Update prev_epochs for next iteration
         prev_epochs = epochs
-        
-        # Evaluate
+          # Evaluate
         mse = model.evaluate(x_test, y_test, verbose=0)
+        rmse = np.sqrt(mse)  # Calculate RMSE
         predictions = model.predict(x_test, verbose=0)
         
         # Calculate error rate
@@ -403,15 +403,16 @@ def run_incremental_epoch_comparison():
         results.append({
             'epochs': epochs,
             'mse': mse,
+            'rmse': rmse,
             'error_rate': error_rate,
             'predictions': predictions
         })
         
-        print(f"    ✅ Training time: {training_time:.1f}s | MSE: {mse:.4f} | Error Rate: {error_rate:.2f}%")
+        print(f"    ✅ Training time: {training_time:.1f}s | MSE: {mse:.4f} | RMSE: {rmse:.4f} | Error Rate: {error_rate:.2f}%")
         print(f"    📊 Total epochs trained so far: {epochs} | Efficient incremental training!")
         
         # Save results to CSV after each iteration
-        save_epoch_results_to_csv(epochs, y_test, predictions, mse, error_rate, i == 1)  # header only on first iteration
+        save_epoch_results_to_csv(epochs, y_test, predictions, mse, rmse, error_rate, i == 1)  # header only on first iteration
       # Create 5x2 subplot visualization (10 plots total) removed - now handled by plot_refined_datasets.py
     # All plotting functionality moved to plot_refined_datasets.py for better organization
     
@@ -466,12 +467,12 @@ def run_incremental_epoch_comparison():
     print(f"   ✅ Incremental training: Each step adds only 50 epochs")
     print(f"   ✅ Model reused efficiently across all {len(epoch_tests)} training phases")
     print(f"   ✅ Massive time savings compared to training from scratch each time!")
-    
-    # Create summary table
+      # Create summary table
     summary_data = []
     for result in results:        summary_data.append({
             'Epochs': result['epochs'],
             'MSE': result['mse'],
+            'RMSE': result['rmse'],
             'Error_Rate_%': result['error_rate']
         })
     
@@ -522,7 +523,7 @@ def check_gpu_status():
     
     print()
 
-def save_epoch_results_to_csv(epochs, y_test, predictions, mse, error_rate, write_header=False):
+def save_epoch_results_to_csv(epochs, y_test, predictions, mse, rmse, error_rate, write_header=False):
     """Save epoch results to CSV file with proper formatting for plot_refined_datasets.py"""
     # Get the script directory and refined datasets path
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -539,6 +540,7 @@ def save_epoch_results_to_csv(epochs, y_test, predictions, mse, error_rate, writ
             'Predicted_kW': predictions[i][0][0],
             'Error_kW': predictions[i][0][0] - y_test[i],
             'MSE': mse,
+            'RMSE': rmse,
             'Error_Rate_%': error_rate
         })
     

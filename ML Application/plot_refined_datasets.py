@@ -428,8 +428,7 @@ def plot_epoch_results(epoch_df):
     # More vertical layout for A4 compatibility (3 rows, 2 columns)
     fig, axes = plt.subplots(3, 2, figsize=(8.5, 12))  # A4-like proportions
     fig.suptitle('ML Training Results - Epoch Progression', fontsize=14, fontweight='bold')
-    
-    # MSE progression
+      # MSE progression
     epoch_mse = epoch_df.groupby('Epoch')['MSE'].first()
     axes[0, 0].plot(epoch_mse.index, epoch_mse.values, 'bo-', linewidth=2, markersize=6)
     axes[0, 0].set_title('MSE vs Epochs', fontsize=12)
@@ -437,13 +436,22 @@ def plot_epoch_results(epoch_df):
     axes[0, 0].set_ylabel('Mean Squared Error')
     axes[0, 0].grid(True, alpha=0.3)
     
-    # Error rate progression
-    epoch_error_rate = epoch_df.groupby('Epoch')['Error_Rate_%'].first()
-    axes[0, 1].plot(epoch_error_rate.index, epoch_error_rate.values, 'ro-', linewidth=2, markersize=6)
-    axes[0, 1].set_title('Error Rate vs Epochs', fontsize=12)
-    axes[0, 1].set_xlabel('Epochs')
-    axes[0, 1].set_ylabel('Error Rate (%)')
-    axes[0, 1].grid(True, alpha=0.3)
+    # RMSE progression (NEW - added to handle new CSV column)
+    if 'RMSE' in epoch_df.columns:
+        epoch_rmse = epoch_df.groupby('Epoch')['RMSE'].first()
+        axes[0, 1].plot(epoch_rmse.index, epoch_rmse.values, 'go-', linewidth=2, markersize=6)
+        axes[0, 1].set_title('RMSE vs Epochs', fontsize=12)
+        axes[0, 1].set_xlabel('Epochs')
+        axes[0, 1].set_ylabel('Root Mean Squared Error')
+        axes[0, 1].grid(True, alpha=0.3)
+    else:
+        # Fallback to Error Rate if RMSE not available (for backward compatibility)
+        epoch_error_rate = epoch_df.groupby('Epoch')['Error_Rate_%'].first()
+        axes[0, 1].plot(epoch_error_rate.index, epoch_error_rate.values, 'ro-', linewidth=2, markersize=6)
+        axes[0, 1].set_title('Error Rate vs Epochs', fontsize=12)
+        axes[0, 1].set_xlabel('Epochs')
+        axes[0, 1].set_ylabel('Error Rate (%)')
+        axes[0, 1].grid(True, alpha=0.3)
     
     # Actual vs Predicted for ALL epochs with distinct colors and legends
     colors = ['blue', 'red', 'green', 'orange', 'purple', 'brown', 'pink', 'gray', 'olive', 'cyan']
@@ -656,13 +664,16 @@ def plot_ml_training_results_5x2():
         x_range = range(1, len(epoch_data) + 1)
         ax.plot(x_range, epoch_data['Actual_kW'], 'b-', label='Actual', linewidth=2)
         ax.plot(x_range, epoch_data['Predicted_kW'], 'r--', label='Predicted', linewidth=2)
-        
-        # Get statistics
+          # Get statistics (updated to handle RMSE)
         mse = epoch_data['MSE'].iloc[0]
         error_rate = epoch_data['Error_Rate_%'].iloc[0]
         
-        # Enhanced title with delta statistics
-        title = f"Epochs: {epoch}\nMSE: {mse:.4f}, Error: {error_rate:.1f}%"
+        # Enhanced title with statistics including RMSE if available
+        if 'RMSE' in epoch_data.columns:
+            rmse = epoch_data['RMSE'].iloc[0]
+            title = f"Epochs: {epoch}\nMSE: {mse:.4f}, RMSE: {rmse:.4f}\nError: {error_rate:.1f}%"
+        else:
+            title = f"Epochs: {epoch}\nMSE: {mse:.4f}, Error: {error_rate:.1f}%"
         if epoch in delta_stats:
             mean_delta = delta_stats[epoch]['mean_delta']
             std_delta = delta_stats[epoch]['std_delta']
