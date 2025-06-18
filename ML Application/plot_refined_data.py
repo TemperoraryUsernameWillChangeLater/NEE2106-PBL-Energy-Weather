@@ -351,11 +351,14 @@ def main():
     print("   1. Weather data analysis from .dat files")
     print("   2. Energy consumption analysis from .dat files")
     print("   3. Weather-energy correlation analysis")
-    print("   4. ML training results analysis from CSV files (enhanced with Figure 5 content)")
+    print("   4. ML training results analysis from CSV files (4-factor model)")
     print("   5. ML training progression (reproduces ML.py plots from CSV data)")  
     print("   6. Prediction differences between epochs")
     print("   7. Actual vs predicted comparisons")
-    print("   8. Figure 7: Prediction vs Actual difference analysis")
+    print("   8. Figure 8: ML Training Results 5x2 (5-factor model)")
+    print("   9. Figure 9: Iteration Differences 5x2 (5-factor model)")
+    print("  10. Figure 10: Prediction vs Actual differences (5-factor model)")
+    print("  11. Figure 11: 4-Factor vs 5-Factor model comparison")
     print("="*60)
     
     # Load data from .dat files
@@ -376,8 +379,7 @@ def main():
     # Create plots from .dat files
     plot_bom_weather_data(bom_df)
     plot_house4_energy_data(house4_df)
-    plot_correlation_analysis(bom_df, house4_df)
-      # Try to load and display CSV files if they exist
+    plot_correlation_analysis(bom_df, house4_df)    # Try to load and display CSV files if they exist
     plot_csv_results()
     
     # Create new 5x2 grid plots for ML results (reproduces ML.py plots from CSV data)
@@ -385,20 +387,31 @@ def main():
     plot_iteration_differences_5x2()
     plot_figure_7_prediction_vs_actual_differences()
     
+    # Create 5-factor model plots (Figures 8-11)
+    plot_ml_training_results_5x2_5factor()
+    plot_iteration_differences_5x2_5factor()
+    plot_figure_10_prediction_vs_actual_differences_5factor()
+    plot_figure_11_comparison_4vs5_factor()
+    
     print("\n✅ All visualizations completed!")
     print("📁 Data sources:")
     print("   • bom.dat / house4.dat (processed weather & energy data)")
-    print("   • incremental_epoch_results.csv (ML training results)")
-    print("   • epoch_differences_results.csv (epoch comparison data)")
+    print("   • incremental_epoch_results_4factor.csv (4-factor ML training results)")
+    print("   • incremental_epoch_results_5factor.csv (5-factor ML training results)")
+    print("   • epoch_differences_results_4factor.csv (4-factor epoch comparison data)")
+    print("   • epoch_differences_results_5factor.csv (5-factor epoch comparison data)")
     print("\n📊 Generated plot types:")
     print("   • Weather data analysis (temperature, distributions, correlations)")
     print("   • Energy consumption patterns and trends")
     print("   • Weather-energy correlation analysis")
-    print("   • ML training progression with enhanced delta statistics")
-    print("   • Prediction differences between training epochs")
-    print("   • Actual vs predicted comparison grids")
+    print("   • ML training progression with enhanced delta statistics (4-factor)")
+    print("   • Prediction differences between training epochs (4-factor)")
+    print("   • Actual vs predicted comparison grids (4-factor)")
     print("   • Statistical analysis and performance metrics")
-    print("   • Figure 7: Prediction vs Actual difference analysis by epoch")
+    print("   • Figure 8: ML Training Results 5x2 (5-factor model)")
+    print("   • Figure 9: Iteration Differences 5x2 (5-factor model)")
+    print("   • Figure 10: Prediction vs Actual differences (5-factor model)")
+    print("   • Figure 11: 4-Factor vs 5-Factor model comparison")
     
     # Keep all plot windows open
     print("\n📊 All plots are now displayed simultaneously!")
@@ -529,76 +542,6 @@ def plot_epoch_results(epoch_df):
     plt.tight_layout()
     plt.show(block=False)
 
-def plot_iteration_differences_5x2():
-    """Plot 5x2 grid (9 plots) showing differences between consecutive epoch iterations"""
-    print("📊 Creating 5x2 Iteration Differences comparison plots...")
-    
-    results_file = os.path.join(refined_datasets_dir, 'incremental_epoch_results.csv')
-    if not os.path.exists(results_file):
-        print(f"❌ {results_file} not found! Run the ML script first.")
-        return
-    
-    # Load results data
-    results_df = pd.read_csv(results_file)
-    epochs = sorted(results_df['Epoch'].unique())
-    
-    if len(epochs) < 2:
-        print("❌ Need at least 2 epochs to calculate differences!")
-        return
-      # Create 5x2 subplot grid with A4-friendly dimensions
-    fig, axes = plt.subplots(5, 2, figsize=(8.5, 12))  # A4-like proportions consistent with other figures
-    fig.suptitle('Prediction Differences Between Consecutive Training Epochs', 
-                 fontsize=14, fontweight='bold')
-    
-    # Flatten axes for easier iteration
-    axes_flat = axes.flatten()
-    
-    # Calculate and plot differences between consecutive epochs
-    plot_count = 0
-    for i in range(len(epochs) - 1):
-        if plot_count >= 9:  # Maximum 9 plots (leaving one subplot empty for legend/info)
-            break
-            
-        current_epoch = epochs[i]
-        next_epoch = epochs[i + 1]
-        
-        # Get data for both epochs
-        current_data = results_df[results_df['Epoch'] == current_epoch].sort_values('DataPoint')
-        next_data = results_df[results_df['Epoch'] == next_epoch].sort_values('DataPoint')
-        
-        # Calculate prediction differences
-        prediction_diff = next_data['Predicted_kW'].values - current_data['Predicted_kW'].values
-        data_points = current_data['DataPoint'].values
-        
-        # Create difference plot
-        colors = ['red' if diff > 0 else 'blue' for diff in prediction_diff]
-        axes_flat[plot_count].bar(data_points, prediction_diff, color=colors, alpha=0.7, width=0.8)
-        
-        # Statistics
-        mean_diff = np.mean(np.abs(prediction_diff))
-        max_diff = np.max(np.abs(prediction_diff))
-        
-        axes_flat[plot_count].set_title(f'Epoch {current_epoch} → {next_epoch}\n' +
-                                       f'Mean |Δ|: {mean_diff:.4f}, Max |Δ|: {max_diff:.4f}', fontsize=10)
-        axes_flat[plot_count].set_xlabel('Data Point', fontsize=9)
-        axes_flat[plot_count].set_ylabel('Prediction Difference (kW)', fontsize=9)
-        axes_flat[plot_count].grid(True, alpha=0.3)
-        axes_flat[plot_count].axhline(y=0, color='black', linestyle='-', linewidth=1, alpha=0.5)
-        axes_flat[plot_count].tick_params(labelsize=8)
-        
-        plot_count += 1    
-    # Hide any unused subplots
-    for j in range(plot_count, 10):
-        axes_flat[j].axis('off')
-    
-    # Hide unused subplots
-    for i in range(plot_count, 9):  # Hide subplots before the summary
-        axes_flat[i].set_visible(False)
-    
-    plt.tight_layout()
-    plt.show(block=False)
-    print("✅ Iteration Differences 5x2 plot completed!")
-
 def plot_ml_training_results_5x2():
     """Recreate the ML training 5x2 grid plots using CSV data with delta statistics"""
     print("📊 Creating ML Training Results 5x2 plots from CSV data...")
@@ -685,6 +628,76 @@ def plot_ml_training_results_5x2():
     plt.show(block=False)
     
     print("✅ ML Training Results 5x2 plot completed!")
+
+def plot_iteration_differences_5x2():
+    """Plot 5x2 grid (9 plots) showing differences between consecutive epoch iterations"""
+    print("📊 Creating 5x2 Iteration Differences comparison plots...")
+    
+    results_file = os.path.join(refined_datasets_dir, 'incremental_epoch_results.csv')
+    if not os.path.exists(results_file):
+        print(f"❌ {results_file} not found! Run the ML script first.")
+        return
+    
+    # Load results data
+    results_df = pd.read_csv(results_file)
+    epochs = sorted(results_df['Epoch'].unique())
+    
+    if len(epochs) < 2:
+        print("❌ Need at least 2 epochs to calculate differences!")
+        return
+      # Create 5x2 subplot grid with A4-friendly dimensions
+    fig, axes = plt.subplots(5, 2, figsize=(8.5, 12))  # A4-like proportions consistent with other figures
+    fig.suptitle('Prediction Differences Between Consecutive Training Epochs', 
+                 fontsize=14, fontweight='bold')
+    
+    # Flatten axes for easier iteration
+    axes_flat = axes.flatten()
+    
+    # Calculate and plot differences between consecutive epochs
+    plot_count = 0
+    for i in range(len(epochs) - 1):
+        if plot_count >= 9:  # Maximum 9 plots (leaving one subplot empty for legend/info)
+            break
+            
+        current_epoch = epochs[i]
+        next_epoch = epochs[i + 1]
+        
+        # Get data for both epochs
+        current_data = results_df[results_df['Epoch'] == current_epoch].sort_values('DataPoint')
+        next_data = results_df[results_df['Epoch'] == next_epoch].sort_values('DataPoint')
+        
+        # Calculate prediction differences
+        prediction_diff = next_data['Predicted_kW'].values - current_data['Predicted_kW'].values
+        data_points = current_data['DataPoint'].values
+        
+        # Create difference plot
+        colors = ['red' if diff > 0 else 'blue' for diff in prediction_diff]
+        axes_flat[plot_count].bar(data_points, prediction_diff, color=colors, alpha=0.7, width=0.8)
+        
+        # Statistics
+        mean_diff = np.mean(np.abs(prediction_diff))
+        max_diff = np.max(np.abs(prediction_diff))
+        
+        axes_flat[plot_count].set_title(f'Epoch {current_epoch} → {next_epoch}\n' +
+                                       f'Mean |Δ|: {mean_diff:.4f}, Max |Δ|: {max_diff:.4f}', fontsize=10)
+        axes_flat[plot_count].set_xlabel('Data Point', fontsize=9)
+        axes_flat[plot_count].set_ylabel('Prediction Difference (kW)', fontsize=9)
+        axes_flat[plot_count].grid(True, alpha=0.3)
+        axes_flat[plot_count].axhline(y=0, color='black', linestyle='-', linewidth=1, alpha=0.5)
+        axes_flat[plot_count].tick_params(labelsize=8)
+        
+        plot_count += 1    
+    # Hide any unused subplots
+    for j in range(plot_count, 10):
+        axes_flat[j].axis('off')
+    
+    # Hide unused subplots
+    for i in range(plot_count, 9):  # Hide subplots before the summary
+        axes_flat[i].set_visible(False)
+    
+    plt.tight_layout()
+    plt.show(block=False)
+    print("✅ Iteration Differences 5x2 plot completed!")
 
 def plot_figure_7_prediction_vs_actual_differences():
     """Create bar plot showing difference (Predicted - Actual) for each epoch interval"""
@@ -783,6 +796,375 @@ def plot_figure_7_prediction_vs_actual_differences():
     print(f"   • Maximum under-prediction: {np.min(all_differences):.4f} kW")
     print("   • 🔴 Red bars: Model over-predicts (Predicted > Actual)")
     print("   • 🔵 Blue bars: Model under-predicts (Predicted < Actual)")
+
+def plot_ml_training_results_5x2_5factor():
+    """Figure 8: Recreate the ML training 5x2 grid plots using 5-factor CSV data with delta statistics"""
+    print("📊 Creating Figure 8: ML Training Results 5x2 plots from 5-factor CSV data...")
+    
+    results_file = os.path.join(refined_datasets_dir, 'incremental_epoch_results_5factor.csv')
+    if not os.path.exists(results_file):
+        print(f"❌ {results_file} not found! Run the ML_5_Factor script first.")
+        return
+    
+    # Load results data
+    results_df = pd.read_csv(results_file)
+    epochs = sorted(results_df['Epoch'].unique())
+    
+    if len(epochs) == 0:
+        print("❌ No epoch data found in 5-factor CSV file!")
+        return
+    
+    # Calculate delta statistics between consecutive epochs
+    delta_stats = {}
+    for i in range(1, len(epochs)):
+        current_epoch = epochs[i]
+        previous_epoch = epochs[i-1]
+        
+        current_data = results_df[results_df['Epoch'] == current_epoch].sort_values('DataPoint')
+        previous_data = results_df[results_df['Epoch'] == previous_epoch].sort_values('DataPoint')
+        
+        # Calculate prediction differences
+        prediction_diff = current_data['Predicted_kW'].values - previous_data['Predicted_kW'].values
+        mean_delta = np.mean(prediction_diff)
+        std_delta = np.std(prediction_diff)
+        
+        delta_stats[current_epoch] = {
+            'mean_delta': mean_delta,
+            'std_delta': std_delta,
+            'from_epoch': previous_epoch
+        }
+    
+    # Create 5x2 subplot grid with A4-friendly dimensions
+    fig, axes = plt.subplots(5, 2, figsize=(8.5, 12))  # A4-like proportions consistent with other figures
+    
+    fig.suptitle('Figure 8: Incremental Epoch Comparison: ML Training Results (5-Factor)\nBOM Weather → House 4 Energy Prediction (5 inputs: Min/Max Temp, Rainfall, 9am/3pm Temp)', 
+                fontsize=12, fontweight='bold')
+    
+    # Plot each epoch's results
+    for i, epoch in enumerate(epochs):
+        if i >= 10:  # Only plot first 10 epochs (5x2 grid)
+            break
+            
+        row = i // 2
+        col = i % 2
+        ax = axes[row, col]
+        
+        # Get data for this epoch
+        epoch_data = results_df[results_df['Epoch'] == epoch].sort_values('DataPoint')
+        
+        x_range = range(1, len(epoch_data) + 1)
+        ax.plot(x_range, epoch_data['Actual_kW'], 'b-', label='Actual', linewidth=2)
+        ax.plot(x_range, epoch_data['Predicted_kW'], 'r--', label='Predicted', linewidth=2)
+        
+        # Get statistics
+        mse = epoch_data['MSE'].iloc[0]
+        error_rate = epoch_data['Error_Rate_%'].iloc[0]
+        
+        # Enhanced title with delta statistics
+        title = f"Epochs: {epoch}\nMSE: {mse:.4f}, Error: {error_rate:.1f}%"
+        if epoch in delta_stats:
+            mean_delta = delta_stats[epoch]['mean_delta']
+            std_delta = delta_stats[epoch]['std_delta']
+            from_epoch = delta_stats[epoch]['from_epoch']
+            title += f"\nΔ from {from_epoch}: μ={mean_delta:.4f}, σ={std_delta:.4f}"
+        
+        ax.set_title(title, fontsize=10, fontweight='bold')
+        ax.set_xlabel('Data Point #', fontsize=9)
+        ax.set_ylabel('Power (kW)', fontsize=9)
+        ax.legend(fontsize=8)
+        ax.grid(True, alpha=0.3)
+    
+    # Hide unused subplots if there are fewer than 10 epochs
+    for i in range(len(epochs), 10):
+        row = i // 2
+        col = i % 2
+        axes[row, col].set_visible(False)
+    
+    plt.tight_layout()
+    plt.show(block=False)
+    
+    print("✅ Figure 8: ML Training Results 5x2 plot (5-factor) completed!")
+
+def plot_iteration_differences_5x2_5factor():
+    """Figure 9: Create 5x2 grid showing prediction differences between consecutive epochs (5-factor)"""
+    print("📊 Creating Figure 9: Iteration Differences 5x2 plots from 5-factor CSV data...")
+    
+    differences_file = os.path.join(refined_datasets_dir, 'epoch_differences_results_5factor.csv')
+    if not os.path.exists(differences_file):
+        print(f"❌ {differences_file} not found! Run the ML_5_Factor script first.")
+        return
+    
+    # Load differences data
+    diff_df = pd.read_csv(differences_file)
+    
+    # Get unique epoch transitions
+    transitions = diff_df.groupby(['From_Epoch', 'To_Epoch']).first().reset_index()
+    transitions = transitions.sort_values('To_Epoch')
+    
+    if len(transitions) == 0:
+        print("❌ No transition data found in 5-factor differences CSV file!")
+        return
+    
+    # Create 5x2 subplot grid
+    fig, axes = plt.subplots(5, 2, figsize=(8.5, 12))  # A4-like proportions consistent with other figures
+    
+    fig.suptitle('Figure 9: Prediction Differences Between Epochs (5-Factor)\nChange in Predictions from Previous Epoch (5 inputs)', 
+                fontsize=12, fontweight='bold')
+    
+    # Plot each transition
+    for i, row in transitions.iterrows():
+        if i >= 10:  # Only plot first 10 transitions (5x2 grid)
+            break
+            
+        plot_row = i // 2
+        plot_col = i % 2
+        ax = axes[plot_row, plot_col]
+        
+        from_epoch = row['From_Epoch']
+        to_epoch = row['To_Epoch']
+        
+        # Get data for this transition
+        transition_data = diff_df[(diff_df['From_Epoch'] == from_epoch) & 
+                                (diff_df['To_Epoch'] == to_epoch)].sort_values('DataPoint')
+        
+        if len(transition_data) == 0:
+            ax.set_visible(False)
+            continue
+        
+        x_range = range(1, len(transition_data) + 1)
+        differences = transition_data['Prediction_Difference']
+        
+        # Plot differences with color coding
+        colors = ['red' if diff > 0 else 'blue' for diff in differences]
+        ax.bar(x_range, differences, color=colors, alpha=0.7, width=0.8)
+        
+        # Statistics
+        mean_diff = transition_data['Mean_Difference'].iloc[0]
+        std_diff = transition_data['Std_Difference'].iloc[0]
+        
+        ax.set_title(f"Δ Epochs {from_epoch}→{to_epoch}\nμ={mean_diff:.4f}, σ={std_diff:.4f}", 
+                    fontsize=10, fontweight='bold')
+        ax.set_xlabel('Data Point #', fontsize=9)
+        ax.set_ylabel('Prediction Δ (kW)', fontsize=9)
+        ax.grid(True, alpha=0.3)
+        ax.axhline(y=0, color='black', linestyle='-', linewidth=0.8)
+    
+    # Hide unused subplots if there are fewer than 10 transitions
+    for i in range(len(transitions), 10):
+        plot_row = i // 2
+        plot_col = i % 2
+        axes[plot_row, plot_col].set_visible(False)
+    
+    plt.tight_layout()
+    plt.show(block=False)
+    
+    print("✅ Figure 9: Iteration Differences 5x2 plot (5-factor) completed!")
+
+def plot_figure_10_prediction_vs_actual_differences_5factor():
+    """Figure 10: Create bar plot showing difference (Predicted - Actual) for each epoch interval (5-factor)"""
+    print("📊 Creating Figure 10: Prediction - Actual Differences by Epoch (5-factor)...")
+    
+    results_file = os.path.join(refined_datasets_dir, 'incremental_epoch_results_5factor.csv')
+    if not os.path.exists(results_file):
+        print(f"❌ {results_file} not found! Run the ML_5_Factor script first.")
+        return
+    
+    # Load results data
+    results_df = pd.read_csv(results_file)
+    epochs = sorted(results_df['Epoch'].unique())
+    
+    if len(epochs) == 0:
+        print("❌ No epoch data found in 5-factor CSV file!")
+        return
+    
+    # Create 5x2 subplot grid
+    fig, axes = plt.subplots(5, 2, figsize=(8.5, 12))  # A4-like proportions consistent with other figures
+    
+    fig.suptitle('Figure 10: Prediction vs Actual Differences by Epoch (5-Factor)\nPredicted - Actual Energy Values (5 inputs)', 
+                fontsize=12, fontweight='bold')
+    
+    all_differences = []
+    
+    # Plot each epoch's prediction vs actual differences
+    for i, epoch in enumerate(epochs):
+        if i >= 10:  # Only plot first 10 epochs (5x2 grid)
+            break
+            
+        row = i // 2
+        col = i % 2
+        ax = axes[row, col]
+        
+        # Get data for this epoch
+        epoch_data = results_df[results_df['Epoch'] == epoch].sort_values('DataPoint')
+        
+        x_range = range(1, len(epoch_data) + 1)
+        differences = epoch_data['Error_kW']  # This is Predicted - Actual
+        all_differences.extend(differences)
+        
+        # Plot differences with color coding (red for over-prediction, blue for under-prediction)
+        colors = ['red' if diff > 0 else 'blue' for diff in differences]
+        ax.bar(x_range, differences, color=colors, alpha=0.7, width=0.8)
+        
+        # Get statistics
+        mse = epoch_data['MSE'].iloc[0]
+        error_rate = epoch_data['Error_Rate_%'].iloc[0]
+        mean_diff = np.mean(differences)
+        std_diff = np.std(differences)
+        
+        ax.set_title(f"Epoch {epoch}\nMSE: {mse:.4f}, Error: {error_rate:.1f}%\nμ_diff: {mean_diff:.4f}, σ_diff: {std_diff:.4f}", 
+                    fontsize=10, fontweight='bold')
+        ax.set_xlabel('Data Point #', fontsize=9)
+        ax.set_ylabel('Pred - Actual (kW)', fontsize=9)
+        ax.grid(True, alpha=0.3)
+        ax.axhline(y=0, color='black', linestyle='-', linewidth=0.8)
+    
+    # Hide unused subplots if there are fewer than 10 epochs
+    for i in range(len(epochs), 10):
+        row = i // 2
+        col = i % 2
+        axes[row, col].set_visible(False)
+    
+    plt.tight_layout()
+    plt.show(block=False)
+    
+    # Print summary statistics
+    print("📊 Figure 10 Summary Statistics (5-factor):")
+    print(f"   • Overall mean difference: {np.mean(all_differences):.4f} kW")
+    print(f"   • Overall std deviation: {np.std(all_differences):.4f} kW")
+    print(f"   • Maximum over-prediction: {np.max(all_differences):.4f} kW")
+    print(f"   • Maximum under-prediction: {np.min(all_differences):.4f} kW")
+    print("   • 🔴 Red bars: Model over-predicts (Predicted > Actual)")
+    print("   • 🔵 Blue bars: Model under-predicts (Predicted < Actual)")
+    
+    print("✅ Figure 10: Prediction vs Actual Differences (5-factor) completed!")
+
+def plot_figure_11_comparison_4vs5_factor():
+    """Figure 11: Create comparison plots between 4-factor and 5-factor models"""
+    print("📊 Creating Figure 11: 4-Factor vs 5-Factor Model Comparison...")
+    
+    results_4factor = os.path.join(refined_datasets_dir, 'incremental_epoch_results_4factor.csv')
+    results_5factor = os.path.join(refined_datasets_dir, 'incremental_epoch_results_5factor.csv')
+    
+    if not os.path.exists(results_4factor):
+        print(f"❌ {results_4factor} not found! Run the ML_4_Factor script first.")
+        return
+    
+    if not os.path.exists(results_5factor):
+        print(f"❌ {results_5factor} not found! Run the ML_5_Factor script first.")
+        return
+    
+    # Load both datasets
+    df_4factor = pd.read_csv(results_4factor)
+    df_5factor = pd.read_csv(results_5factor)
+    
+    epochs_4 = sorted(df_4factor['Epoch'].unique())
+    epochs_5 = sorted(df_5factor['Epoch'].unique())
+    
+    # Find common epochs
+    common_epochs = sorted(set(epochs_4) & set(epochs_5))
+    
+    if len(common_epochs) == 0:
+        print("❌ No common epochs found between 4-factor and 5-factor models!")
+        return
+    
+    # Create comparison plots
+    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+    
+    fig.suptitle('Figure 11: 4-Factor vs 5-Factor Model Comparison\nPerformance Analysis Across Epochs', 
+                fontsize=14, fontweight='bold')
+    
+    # Plot 1: MSE Comparison
+    ax1 = axes[0, 0]
+    mse_4factor = []
+    mse_5factor = []
+    
+    for epoch in common_epochs:
+        mse_4 = df_4factor[df_4factor['Epoch'] == epoch]['MSE'].iloc[0]
+        mse_5 = df_5factor[df_5factor['Epoch'] == epoch]['MSE'].iloc[0]
+        mse_4factor.append(mse_4)
+        mse_5factor.append(mse_5)
+    
+    ax1.plot(common_epochs, mse_4factor, 'b-o', label='4-Factor Model', linewidth=2, markersize=6)
+    ax1.plot(common_epochs, mse_5factor, 'r-s', label='5-Factor Model', linewidth=2, markersize=6)
+    ax1.set_title('MSE Comparison', fontweight='bold')
+    ax1.set_xlabel('Epochs')
+    ax1.set_ylabel('Mean Squared Error')
+    ax1.legend()
+    ax1.grid(True, alpha=0.3)
+    
+    # Plot 2: Error Rate Comparison
+    ax2 = axes[0, 1]
+    error_4factor = []
+    error_5factor = []
+    
+    for epoch in common_epochs:
+        error_4 = df_4factor[df_4factor['Epoch'] == epoch]['Error_Rate_%'].iloc[0]
+        error_5 = df_5factor[df_5factor['Epoch'] == epoch]['Error_Rate_%'].iloc[0]
+        error_4factor.append(error_4)
+        error_5factor.append(error_5)
+    
+    ax2.plot(common_epochs, error_4factor, 'b-o', label='4-Factor Model', linewidth=2, markersize=6)
+    ax2.plot(common_epochs, error_5factor, 'r-s', label='5-Factor Model', linewidth=2, markersize=6)
+    ax2.set_title('Error Rate Comparison', fontweight='bold')
+    ax2.set_xlabel('Epochs')
+    ax2.set_ylabel('Error Rate (%)')
+    ax2.legend()
+    ax2.grid(True, alpha=0.3)
+    
+    # Plot 3: Model Improvement (MSE difference)
+    ax3 = axes[1, 0]
+    mse_diff = [mse_5 - mse_4 for mse_4, mse_5 in zip(mse_4factor, mse_5factor)]
+    colors = ['green' if diff < 0 else 'red' for diff in mse_diff]
+    
+    ax3.bar(common_epochs, mse_diff, color=colors, alpha=0.7)
+    ax3.axhline(y=0, color='black', linestyle='-', linewidth=1)
+    ax3.set_title('MSE Improvement (5-Factor - 4-Factor)', fontweight='bold')
+    ax3.set_xlabel('Epochs')
+    ax3.set_ylabel('MSE Difference')
+    ax3.grid(True, alpha=0.3)
+    
+    # Plot 4: Summary Statistics Table
+    ax4 = axes[1, 1]
+    ax4.axis('off')
+    
+    # Calculate summary statistics
+    avg_mse_4 = np.mean(mse_4factor)
+    avg_mse_5 = np.mean(mse_5factor)
+    avg_error_4 = np.mean(error_4factor)
+    avg_error_5 = np.mean(error_5factor)
+    
+    best_mse_4 = min(mse_4factor)
+    best_mse_5 = min(mse_5factor)
+    best_error_4 = min(error_4factor)
+    best_error_5 = min(error_5factor)
+    
+    summary_text = f"""Model Performance Summary
+    
+Average Performance:
+• 4-Factor MSE: {avg_mse_4:.4f}
+• 5-Factor MSE: {avg_mse_5:.4f}
+• MSE Improvement: {((avg_mse_4 - avg_mse_5)/avg_mse_4)*100:.1f}%
+
+• 4-Factor Error: {avg_error_4:.1f}%
+• 5-Factor Error: {avg_error_5:.1f}%
+• Error Improvement: {avg_error_4 - avg_error_5:.1f} pp
+
+Best Performance:
+• Best 4-Factor MSE: {best_mse_4:.4f}
+• Best 5-Factor MSE: {best_mse_5:.4f}
+• Best 4-Factor Error: {best_error_4:.1f}%
+• Best 5-Factor Error: {best_error_5:.1f}%
+
+Total Epochs Compared: {len(common_epochs)}"""
+    
+    ax4.text(0.05, 0.95, summary_text, transform=ax4.transAxes, 
+            fontsize=10, verticalalignment='top', fontfamily='monospace',
+            bbox=dict(boxstyle='round', facecolor='lightgray', alpha=0.8))
+    
+    plt.tight_layout()
+    plt.show(block=False)
+    
+    print("✅ Figure 11: 4-Factor vs 5-Factor Comparison completed!")
 
 if __name__ == "__main__":
     main()

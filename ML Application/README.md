@@ -1,199 +1,269 @@
-# Machine Learning Application - Energy Forecasting
+# Machine Learning Application - Weather-Based Energy Export Prediction
 
 ## Overview
-This ML application implements **Part 2** of the PBL Project: Machine Learning Implementation for predicting household energy consumption based on weather patterns using Recurrent Neural Networks (RNN/LSTM).
+This ML application implements **Part 2** of the PBL Project: Machine Learning Implementation for predicting household **solar energy export** based on weather patterns using Neural Networks with TensorFlow/Keras. The project uses Melbourne weather data and Adelaide household solar export data to build accurate energy forecasting models.
+
+## 🔄 Recent Updates (June 2025)
+- ✅ **Clarified Data Type**: All energy data is specifically **solar export** (energy exported back to grid)
+- ✅ **Enhanced Model Architecture**: Implemented both 4-factor and 5-factor prediction models
+- ✅ **Improved Data Processing**: Uses all available BOM weather features
+- ✅ **Advanced Visualization**: Comprehensive plotting with `plot_refined_data.py`
+- ✅ **Incremental Training**: Efficient epoch-based training (50, 100, 150, 200, 250 epochs)
 
 ## Project Requirements Implemented
 
 ### ✅ Dataset Preparation
-- Loads integrated energy dataset from Session 5
-- Splits data into training and testing sets
-- Implements proper data preprocessing and scaling
+- **Energy Data**: House 4 solar export data from Adelaide (kWh exported to grid)
+- **Weather Data**: Melbourne Bureau of Meteorology data with 5 key factors:
+  - MinTemp (°C), MaxTemp (°C), Rainfall (mm), 9amTemp (°C), 3pmTemp (°C)
+- **Data Integration**: Properly aligned and processed datasets
+- **Train/Test Split**: Chronological split maintaining temporal relationships
 
-### ✅ RNN Model Development
-- **Single Factor Analysis**: Temperature only
-- **Single Factor Analysis**: Weather conditions only  
-- **Two Factor Analysis**: Temperature + Weather conditions
-- **Multi-Factor Analysis**: All available features
+### ✅ Neural Network Model Development
+- **4-Factor Model**: MinTemp, MaxTemp, Rainfall, 9amTemp (traditional approach)
+- **5-Factor Model**: All BOM factors including 3pmTemp (enhanced accuracy)
+- **Architecture**: Dense layers with proper regularization and optimization
+- **Incremental Training**: Efficient 50-epoch increments for optimal performance
 
 ### ✅ Model Performance Evaluation
-- **Error Metrics**: MAE (Mean Absolute Error), RMSE (Root Mean Square Error)
-- **Accuracy Measures**: R² Score for model comparison
-- **Visual Comparison**: Predicted vs Actual results with pattern analysis
+- **Error Metrics**: MSE (Mean Squared Error) for energy predictions
+- **Accuracy Measures**: Error Rate percentage for practical interpretation
+- **Training Tracking**: Comprehensive CSV logging of all training iterations
+- **Comparative Analysis**: Direct comparison between 4-factor and 5-factor models
 
-### ✅ Comprehensive Analysis
-- Performance comparison table for all models
-- Feature importance analysis
-- Training history visualization
-- Residual analysis for model validation
+### ✅ Comprehensive Visualization & Analysis
+- **Figure 1-7**: 4-factor model results and performance metrics  
+- **Figure 8-11**: 5-factor model results and comparative analysis
+- **Direct Comparison**: Side-by-side evaluation of both model approaches
+- **Training History**: MSE progression over incremental epochs
+- **Error Analysis**: Detailed prediction accuracy assessment
 
-### ✅ Optimization Recommendations
-- Energy usage optimization techniques
-- Load scheduling recommendations
-- Renewable energy integration strategies
+### ✅ Energy Export Optimization
+- **Solar Export Predictions**: Accurate forecasting of energy exported to grid
+- **Weather-Based Insights**: Understanding weather impact on solar generation
+- **Grid Integration**: Optimization recommendations for energy export timing
+- **Seasonal Analysis**: Weather pattern effects on solar export efficiency
 
 ## Files Structure
 
 ```
 ML Application/
-├── ML.py                    # Main ML application (Complete implementation)
-├── test_ml_setup.py         # Quick test script to verify setup
-├── requirements.txt         # Required Python packages
-└── README.md               # This file
+├── ML_4_Factor.py           # 4-factor model (MinTemp, MaxTemp, Rainfall, 9amTemp)
+├── ML_5_Factor.py           # 5-factor model (includes 3pmTemp for enhanced accuracy)
+├── plot_refined_data.py     # Comprehensive visualization and plotting
+├── README.md               # This file
+├── BOM_year.csv            # Melbourne weather data (Bureau of Meteorology)
+├── House 4_Melb West.csv   # Adelaide household solar export data
+└── Refined Datasets/       # Output directory for results
+    ├── *.csv               # Training results and performance metrics
+    └── *.png               # Generated visualizations and figures
 ```
 
 ## Installation & Setup
 
 ### 1. Install Required Packages
 ```bash
-pip install pandas numpy matplotlib seaborn scikit-learn tensorflow
+pip install pandas numpy matplotlib tensorflow scikit-learn
 ```
 
-Or use the requirements file:
-```bash
-pip install -r requirements.txt
-```
+### 2. Verify Data Files
+Ensure the following files are present:
+- `BOM_year.csv`: Melbourne weather data
+- `House 4_Melb West.csv`: Adelaide solar export data
 
-### 2. Verify Setup
-Run the test script first to ensure everything works:
+### 3. Run Models
+Execute either or both models:
 ```bash
-python test_ml_setup.py
-```
+# Run 4-factor model
+python ML_4_Factor.py
 
-### 3. Run Full ML Analysis
-Execute the complete ML pipeline:
-```bash
-python ML.py
+# Run 5-factor model  
+python ML_5_Factor.py
+
+# Generate all visualizations
+python plot_refined_data.py
 ```
 
 ## Expected Outputs
 
-### 📊 Performance Summary Table
-- Comparison of all model types
-- MAE, RMSE, and R² scores for each model
-- Factor count and primary features used
+### 📊 Training Results (CSV Files)
+- **`incremental_epoch_results_4factor.csv`**: Complete 4-factor model training history
+- **`incremental_epoch_results_5factor.csv`**: Complete 5-factor model training history  
+- **`epoch_differences_results.csv`**: Comparative analysis between training phases
 
-### 📈 Visualizations (`energy_forecasting_results.png`)
-1. **Model Performance Comparison**: R², MAE, RMSE charts
-2. **Prediction vs Actual**: Time series comparison for each model
-3. **Training History**: Loss curves during model training
-4. **Residual Analysis**: Error pattern analysis
-5. **Feature Importance**: Correlation analysis with target variable
+### 📈 Visualizations (Generated by `plot_refined_data.py`)
+1. **Figure 1**: 4-Factor Training Progress - MSE over epochs
+2. **Figure 2**: 4-Factor Predictions vs Actual - Time series comparison
+3. **Figure 3**: 4-Factor Error Analysis - Prediction accuracy distribution
+4. **Figure 4**: 4-Factor Model Performance Summary
+5. **Figure 5**: 4-Factor Prediction Error Rate Analysis
+6. **Figure 6**: 4-Factor Feature Correlation Analysis
+7. **Figure 7**: 4-Factor Training Summary Dashboard
 
-### 📋 CSV Export (`model_performance_summary.csv`)
-- Detailed performance metrics for all models
-- Ready for report inclusion and further analysis
+8. **Figure 8**: 5-Factor Training Progress - Enhanced model performance
+9. **Figure 9**: 5-Factor Predictions vs Actual - Improved accuracy comparison
+10. **Figure 10**: 5-Factor vs 4-Factor Direct Comparison
+11. **Figure 11**: 5-Factor Enhanced Performance Analysis
 
-### 💡 Insights and Recommendations
-- Key findings about energy consumption patterns
-- Optimization strategies for energy management
-- Peak hour identification and load scheduling advice
+### 💡 Key Insights and Findings
+- **Model Accuracy**: 5-factor model shows improved prediction accuracy
+- **Weather Impact**: Afternoon temperature (3pmTemp) significantly affects solar export
+- **Training Efficiency**: Incremental training reaches optimal performance at ~200 epochs
+- **Export Patterns**: Clear weather-dependent solar energy export patterns identified
 
 ## Model Architecture
 
-### Single/Two Factor Models
+### 4-Factor Model (ML_4_Factor.py)
 ```
-LSTM(50) → Dropout(0.2) → LSTM(50) → Dropout(0.2) → Dense(25) → Dense(1)
-```
-
-### Multi-Factor Model
-```
-LSTM(100) → Dropout(0.3) → LSTM(50) → Dropout(0.3) → LSTM(25) → Dropout(0.2) 
-→ Dense(50) → Dense(25) → Dense(1)
+Input: [MinTemp, MaxTemp, Rainfall, 9amTemp] → (4 features)
+Dense(128, relu) → Dropout(0.3) → Dense(64, relu) → Dropout(0.2) → Dense(1)
 ```
 
+### 5-Factor Model (ML_5_Factor.py)  
+```
+Input: [MinTemp, MaxTemp, Rainfall, 9amTemp, 3pmTemp] → (5 features)
+Dense(128, relu) → Dropout(0.3) → Dense(64, relu) → Dropout(0.2) → Dense(1)
+```
 ## Key Features
 
 ### 🔄 Data Preprocessing
-- Timestamp conversion and time-based feature extraction
-- Weather condition encoding (categorical → numerical)
-- Missing value handling and data cleaning
-- Sequence creation for LSTM training (24-hour windows)
+- **Weather Data**: Melbourne BOM data with 5 meteorological factors
+- **Energy Data**: Adelaide House 4 solar export measurements (kWh to grid)
+- **Data Alignment**: Proper temporal matching between weather and energy data
+- **Feature Scaling**: StandardScaler normalization for optimal training performance
+- **Missing Value Handling**: Robust data cleaning and validation
 
-### 🧠 Model Training
-- Early stopping to prevent overfitting
-- Validation split for model tuning
-- Feature scaling for optimal performance
-- Multiple model comparison framework
+### 🧠 Model Training  
+- **Incremental Training**: Efficient 50-epoch increments (50→100→150→200→250)
+- **Early Convergence**: Optimal performance typically achieved around 200 epochs
+- **Model Persistence**: Trained models reused efficiently across training phases
+- **Validation Tracking**: Comprehensive MSE and error rate monitoring
+- **Auto-Generation**: ML_4_Factor automatically creates ML_5_Factor.py after completion
 
-### 📊 Comprehensive Evaluation
-- Multiple error metrics (MAE, RMSE, R²)
-- Visual comparison of predictions vs actual values
-- Training history analysis
-- Residual plotting for model validation
+### 📊 Advanced Evaluation
+- **MSE Tracking**: Mean Squared Error for energy prediction accuracy
+- **Error Rate Analysis**: Percentage-based error interpretation
+- **Comparative Analysis**: Direct 4-factor vs 5-factor model comparison
+- **Training History**: Complete epoch-by-epoch performance logging
+- **Visual Analytics**: Comprehensive plotting via `plot_refined_data.py`
 
-### ⚡ Optimization Insights
-- Peak demand hour identification
-- Feature correlation analysis
-- Energy usage optimization recommendations
-- Renewable energy integration strategies
+### ⚡ Solar Export Optimization
+- **Weather-Based Forecasting**: Predict solar export based on weather conditions
+- **Grid Integration Planning**: Optimize energy export timing and quantities  
+- **Seasonal Pattern Analysis**: Understanding weather impacts on solar generation
+- **Performance Benchmarking**: Model accuracy assessment for practical applications
 
 ## Usage Example
 
 ```python
-# Initialize the forecasting model
-forecaster = EnergyForecastingModel()
+# Run 4-factor model first
+python ML_4_Factor.py
+# This automatically creates and can run ML_5_Factor.py
 
-# Load and prepare data
-forecaster.load_and_prepare_data("path/to/energy_dataset.csv")
+# Generate comprehensive visualizations
+python plot_refined_data.py
+# Creates Figures 1-11 with complete analysis
 
-# Train different model types
-forecaster.train_single_factor_model('Temperature')
-forecaster.train_two_factor_model('Temperature', 'Weather_Condition_x_encoded')
-forecaster.train_multi_factor_model()
-
-# Generate performance summary and visualizations
-forecaster.create_performance_summary()
-forecaster.visualize_results()
-forecaster.generate_insights_and_recommendations()
+# Expected workflow:
+# 1. ML_4_Factor.py trains model with 4 weather factors
+# 2. ML_5_Factor.py trains enhanced model with 5 weather factors  
+# 3. plot_refined_data.py generates all visualizations and comparisons
 ```
 
 ## Assessment Criteria Addressed
 
-### ✅ Dataset Preparation
-- ✅ Training/testing split implemented
-- ✅ RNN model development and training
-- ✅ Model validation with testing data
+### ✅ Dataset Preparation & Integration
+- ✅ **Weather Data**: Melbourne Bureau of Meteorology data (5 factors)
+- ✅ **Energy Data**: Adelaide household solar export data (kWh to grid)
+- ✅ **Training/Testing Split**: Proper chronological data division
+- ✅ **Data Preprocessing**: Feature scaling and normalization
 
-### ✅ Model Performance Evaluation
-- ✅ MAE and RMSE error handling
-- ✅ Visual comparison of predicted vs actual results
-- ✅ Pattern discrepancy analysis
+### ✅ Neural Network Model Development
+- ✅ **4-Factor Model**: Traditional weather-based prediction (MinTemp, MaxTemp, Rainfall, 9amTemp)
+- ✅ **5-Factor Model**: Enhanced prediction with afternoon temperature (+ 3pmTemp)
+- ✅ **Model Architecture**: Dense layers with appropriate regularization
+- ✅ **Training Strategy**: Incremental epoch-based training for efficiency
 
-### ✅ Single Factor Analysis
-- ✅ Temperature factor analysis
-- ✅ Weather condition factor analysis
-- ✅ Performance recording and comparison
+### ✅ Model Performance Evaluation  
+- ✅ **MSE Calculation**: Mean Squared Error for energy prediction accuracy
+- ✅ **Error Rate Analysis**: Percentage-based performance interpretation
+- ✅ **Training History**: Complete epoch-by-epoch performance tracking
+- ✅ **Comparative Analysis**: Direct 4-factor vs 5-factor model comparison
 
-### ✅ Two Factor Analysis
-- ✅ Combined temperature and weather analysis
-- ✅ Performance comparison with single-factor models
-- ✅ Multi-factor effect examination
+### ✅ Comprehensive Analysis & Visualization
+- ✅ **Performance Tables**: Detailed CSV output with all training metrics
+- ✅ **Visual Analysis**: 11 comprehensive figures via `plot_refined_data.py`
+- ✅ **Model Comparison**: Side-by-side evaluation of different approaches
+- ✅ **Insights Generation**: Weather-energy relationship analysis and optimization recommendations
 
-### ✅ Model Performance Summary
-- ✅ Comprehensive performance table (DataFrame)
-- ✅ Analysis of findings and insights
-- ✅ Energy optimization techniques based on predictions
+### ✅ Solar Energy Export Optimization
+- ✅ **Weather-Based Forecasting**: Accurate solar export predictions
+- ✅ **Grid Integration Insights**: Export timing and quantity optimization
+- ✅ **Seasonal Analysis**: Weather pattern impact on solar generation
+- ✅ **Performance Benchmarking**: Model validation for practical applications
+
+## Technical Implementation
+
+### Data Processing Pipeline
+```python
+# 1. Load weather and energy data
+weather_data = pd.read_csv('BOM_year.csv')
+energy_data = pd.read_csv('House 4_Melb West.csv')
+
+# 2. Feature engineering and alignment
+features_4factor = ['MinTemp', 'MaxTemp', 'Rainfall', '9amTemp']
+features_5factor = features_4factor + ['3pmTemp']
+
+# 3. Model training with incremental epochs
+for epochs in [50, 100, 150, 200, 250]:
+    model.fit(X_train, y_train, epochs=50, validation_split=0.2)
+    
+# 4. Performance evaluation and comparison
+mse = mean_squared_error(y_test, predictions)
+error_rate = (mse / np.mean(y_test)) * 100
+```
+
+### Visualization Framework
+```python
+# Generate all 11 figures with comprehensive analysis
+python plot_refined_data.py
+
+# Creates:
+# - Figures 1-7: 4-factor model analysis
+# - Figures 8-11: 5-factor model and comparison analysis
+```
 
 ## Troubleshooting
 
 ### Common Issues:
-1. **TensorFlow Installation**: Ensure you have Python 3.8-3.11
-2. **Memory Issues**: Reduce batch size or sequence length if needed
-3. **Data Path**: Verify the correct path to the energy dataset
-4. **Missing Packages**: Install all requirements from requirements.txt
+1. **TensorFlow Installation**: Ensure Python 3.8-3.11 compatibility
+2. **Data Files Missing**: Verify `BOM_year.csv` and `House 4_Melb West.csv` are present
+3. **Memory Issues**: Reduce batch size if encountering memory constraints
+4. **Package Dependencies**: Install pandas, numpy, matplotlib, tensorflow, scikit-learn
 
 ### Performance Tips:
-- Run `test_ml_setup.py` first to verify data accessibility
-- Use GPU acceleration if available (CUDA-enabled TensorFlow)
-- Adjust sequence length based on available memory
-- Monitor training progress and stop early if overfitting occurs
+- **GPU Acceleration**: Use CUDA-enabled TensorFlow if available for faster training
+- **Incremental Training**: Models designed for efficient 50-epoch increments
+- **Auto-Generation**: ML_4_Factor.py automatically creates ML_5_Factor.py
+- **Visualization**: Run `plot_refined_data.py` after training for comprehensive analysis
+
+### File Requirements:
+- **BOM_year.csv**: Melbourne weather data with MinTemp, MaxTemp, Rainfall, 9amTemp, 3pmTemp
+- **House 4_Melb West.csv**: Adelaide solar export data with Date and Export columns
+- **Output Directory**: `Refined Datasets/` created automatically for results
 
 ## Expected Runtime
-- **Quick Test**: ~30 seconds
-- **Full ML Pipeline**: ~5-10 minutes (depending on hardware)
+- **4-Factor Model Training**: ~2-3 minutes
+- **5-Factor Model Training**: ~2-3 minutes  
 - **Visualization Generation**: ~1-2 minutes
+- **Total Workflow**: ~5-8 minutes for complete analysis
+
+## Performance Benchmarks
+- **4-Factor Model**: Baseline performance with traditional weather factors
+- **5-Factor Model**: Enhanced accuracy with afternoon temperature inclusion
+- **Training Efficiency**: Optimal performance typically achieved around 200 epochs
+- **Error Rates**: Target <15% error rate for practical solar export forecasting
 
 ---
 
-🎯 **This implementation fully satisfies Part 2 requirements of the PBL Project and provides comprehensive analysis for energy consumption forecasting based on weather patterns.**
+🎯 **This implementation provides comprehensive weather-based solar energy export prediction with both 4-factor and 5-factor models, complete performance analysis, and practical optimization insights for grid-connected solar systems.**

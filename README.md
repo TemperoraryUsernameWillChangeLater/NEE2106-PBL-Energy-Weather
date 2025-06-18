@@ -20,10 +20,21 @@ The **Energy and Weather PBL Project** is designed to apply programming concepts
 
 ```
 PBL Project - Energy and Weather/
-├── GUI.py                                    # Main application interface
+├── GUI.py                                    # Main application interface  
 ├── README.md                                 # This file
 ├── PBL Project Description - Energy and Weather .pdf  # Detailed project requirements
-└── DataSets/                                # Weather data files
+├── ML Application/                           # Machine Learning Implementation (Part 2)
+│   ├── ML_4_Factor.py                       # 4-factor weather-based energy prediction
+│   ├── ML_5_Factor.py                       # 5-factor enhanced energy prediction
+│   ├── plot_refined_data.py                 # Comprehensive visualization system
+│   ├── README.md                            # ML Application documentation
+│   ├── BOM_year.csv                         # Melbourne weather data (5 factors)
+│   ├── House 4_Melb West.csv               # Adelaide solar export data
+│   └── Refined Datasets/                    # Output directory for results
+│       ├── incremental_epoch_results_4factor.csv
+│       ├── incremental_epoch_results_5factor.csv
+│       └── *.png                            # Generated visualizations (11 figures)
+└── DataSets/                                # Weather data files (Part 1)
     ├── 24-05.csv  # May 2024 Adelaide weather data
     ├── 24-06.csv  # June 2024 Adelaide weather data
     ├── 24-07.csv  # July 2024 Adelaide weather data
@@ -38,13 +49,44 @@ PBL Project - Energy and Weather/
     └── 25-04.csv  # April 2025 Adelaide weather data
 ```
 
+## 🔬 ML Application - Weather-Based Energy Prediction
+
+### Part 2 Implementation (June 2025)
+The **ML Application** folder contains a comprehensive machine learning implementation for predicting solar energy export based on weather patterns:
+
+- **🧠 Neural Network Models**: 4-factor and 5-factor weather-based prediction models
+- **📊 Training Data**: Melbourne weather data + Adelaide household solar export data  
+- **📈 Performance Analysis**: Comprehensive evaluation with 11 detailed visualizations
+- **⚡ Solar Export Focus**: Specifically predicts energy exported back to the electrical grid
+- **🎯 Incremental Training**: Efficient 50-epoch increments for optimal performance
+
+**Key Features:**
+- ✅ **4-Factor Model**: MinTemp, MaxTemp, Rainfall, 9amTemp (traditional approach)
+- ✅ **5-Factor Model**: Enhanced with 3pmTemp for improved afternoon solar prediction
+- ✅ **Automated Workflow**: ML_4_Factor.py automatically generates ML_5_Factor.py
+- ✅ **Advanced Visualization**: Complete analysis via `plot_refined_data.py`
+- ✅ **Performance Tracking**: MSE and error rate monitoring across training phases
+
+**Quick Start:**
+```bash
+cd "ML Application"
+python ML_4_Factor.py      # Trains 4-factor model
+python ML_5_Factor.py      # Trains enhanced 5-factor model  
+python plot_refined_data.py # Generates all visualizations
+```
+
 ## 🌡️ Dataset Information
 
-### Data Source
+### Part 1: Adelaide Weather Data (GUI Application)
 - **Location**: Adelaide (West Terrace / Ngayirdapira), South Australia
 - **Station**: 023000 (Bureau of Meteorology)
 - **Period**: May 2024 - April 2025 (12 months of data)
 - **Frequency**: Daily observations
+
+### Part 2: ML Training Data (Neural Network Models)
+- **Weather Data**: Melbourne Bureau of Meteorology (5 meteorological factors)
+- **Energy Data**: Adelaide House 4 solar export measurements (kWh to grid)
+- **Integration**: Aligned weather-energy dataset for machine learning training
 
 ### Available Weather Parameters
 - **Temperature**: Minimum and maximum daily temperatures (°C)

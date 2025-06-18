@@ -8,7 +8,7 @@ import pandas as pd
 import os
 import math
 import pickle
-# matplotlib.pyplot import removed - plotting now handled by plot_refined_datasets.py
+# matplotlib.pyplot import removed - plotting now handled by plot_refined_data.py
 
 # ====================
 # CUDA CONFIGURATION
@@ -93,8 +93,8 @@ bomdata = os.path.join(datapath, 'BOM_year.csv')
 house4data = os.path.join(datapath, 'House 4_Melb West.csv')
 
 # Create processed data files in Refined Datasets directory
-bomfile = os.path.join(refined_datasets_dir, 'bom.dat')
-house4file = os.path.join(refined_datasets_dir, 'house4.dat')
+bomfile = os.path.join(refined_datasets_dir, 'bom_4factor.dat')
+house4file = os.path.join(refined_datasets_dir, 'house4_4factor.dat')
 
 #function to change month from string to number
 def mTon(m):
@@ -410,19 +410,18 @@ def run_incremental_epoch_comparison():
         print(f"    ✅ Training time: {training_time:.1f}s | MSE: {mse:.4f} | Error Rate: {error_rate:.2f}%")
         print(f"    📊 Total epochs trained so far: {epochs} | Efficient incremental training!")
         
-        # Save results to CSV after each iteration
-        save_epoch_results_to_csv(epochs, y_test, predictions, mse, error_rate, i == 1)  # header only on first iteration
-      # Create 5x2 subplot visualization (10 plots total) removed - now handled by plot_refined_datasets.py
-    # All plotting functionality moved to plot_refined_datasets.py for better organization
+        # Save results to CSV after each iteration        save_epoch_results_to_csv(epochs, y_test, predictions, mse, error_rate, i == 1)  # header only on first iteration      # Create 5x2 subplot visualization (10 plots total) removed - now handled by plot_refined_data.py
+    # All plotting functionality moved to plot_refined_data.py for better organization
     
-    print(f"\n📊 Training completed! Visualization will be handled by plot_refined_datasets.py")
+    print(f"\n📊 Training completed! Visualization will be handled by plot_refined_data.py")
     print(f"📁 Results saved to CSV files in: {refined_datasets_dir}")
-      # Call the plotting script to handle all visualizations
+    
+    # Call the plotting script to handle all visualizations
     try:
         import subprocess
         import sys
         
-        plot_script = os.path.join(os.path.dirname(__file__), 'plot_refined_datasets.py')
+        plot_script = os.path.join(os.path.dirname(__file__), 'plot_refined_data.py')
         print(f"\n🎨 Launching visualization script: {plot_script}")
         
         # Run the plotting script in a separate process with real-time output
@@ -438,11 +437,12 @@ def run_incremental_epoch_comparison():
             
     except Exception as e:
         print(f"⚠️  Could not launch plotting script: {e}")
-        print("💡 You can run 'python plot_refined_datasets.py' manually to see visualizations")# Difference comparison plotting removed - now handled by plot_refined_datasets.py
-    # All plotting functionality moved to plot_refined_datasets.py for better organization
+        print("💡 You can run 'python plot_refined_data.py' manually to see visualizations")
+          # Difference comparison plotting removed - now handled by plot_refined_data.py
+    # All plotting functionality moved to plot_refined_data.py for better organization
     
     if len(results) > 1:
-        print(f"📊 Difference analysis data will be visualized by plot_refined_datasets.py")
+        print(f"📊 Difference analysis data will be visualized by plot_refined_data.py")
         print(f"📁 Difference data saved to: {os.path.join(refined_datasets_dir, 'epoch_differences_results.csv')}")
         
         # Save difference results to CSV for all consecutive epoch pairs
@@ -460,7 +460,7 @@ def run_incremental_epoch_comparison():
         print(f"✅ All difference data saved for visualization")
 
     print("\n📊 All training data saved to CSV files!")
-    print("💡 Run 'python plot_refined_datasets.py' to see all visualizations")
+    print("💡 Run 'python plot_refined_data.py' to see all visualizations")
     print(f"\n🚀 EFFICIENCY ACHIEVED!")
     print(f"   ✅ Total epochs trained: 500 (not 1000+ wasteful epochs)")
     print(f"   ✅ Incremental training: Each step adds only 50 epochs")
@@ -476,7 +476,7 @@ def run_incremental_epoch_comparison():
         })
     
     summary_df = pd.DataFrame(summary_data)
-    summary_file = os.path.join(refined_datasets_dir, 'incremental_epoch_comparison_summary.csv')
+    summary_file = os.path.join(refined_datasets_dir, 'incremental_epoch_comparison_summary_4factor.csv')
     summary_df.to_csv(summary_file, index=False)
     
     print(f"\nSummary saved to: {summary_file}")
@@ -523,11 +523,11 @@ def check_gpu_status():
     print()
 
 def save_epoch_results_to_csv(epochs, y_test, predictions, mse, error_rate, write_header=False):
-    """Save epoch results to CSV file with proper formatting for plot_refined_datasets.py"""
+    """Save epoch results to CSV file with proper formatting for plot_refined_data.py"""
     # Get the script directory and refined datasets path
     script_dir = os.path.dirname(os.path.abspath(__file__))
     refined_datasets_dir = os.path.join(script_dir, 'Refined Datasets')
-    csv_file = os.path.join(refined_datasets_dir, 'incremental_epoch_results.csv')
+    csv_file = os.path.join(refined_datasets_dir, 'incremental_epoch_results_4factor.csv')
     
     # Create DataFrame for this epoch's results
     epoch_data = []
@@ -559,7 +559,7 @@ def save_difference_results_to_csv(epoch_from, epoch_to, prediction_diff, mean_d
     # Get the script directory and refined datasets path
     script_dir = os.path.dirname(os.path.abspath(__file__))
     refined_datasets_dir = os.path.join(script_dir, 'Refined Datasets')
-    csv_file = os.path.join(refined_datasets_dir, 'epoch_differences_results.csv')
+    csv_file = os.path.join(refined_datasets_dir, 'epoch_differences_results_4factor.csv')
     
     # Create DataFrame for this difference analysis
     diff_data = []
@@ -624,3 +624,20 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
+    # After training is complete, rename this file to ML_5_Factor.py
+    import shutil
+    script_path = os.path.abspath(__file__)
+    script_dir = os.path.dirname(script_path)
+    new_path = os.path.join(script_dir, 'ML_5_Factor.py')
+    
+    try:
+        # Copy current file to ML_5_Factor.py (don't move, copy to preserve original)
+        if not os.path.exists(new_path):
+            shutil.copy2(script_path, new_path)
+            print(f"✅ File copied to: {new_path}")
+            print("   You can now run ML_5_Factor.py for 5-factor training")
+        else:
+            print(f"⚠️  File {new_path} already exists - not overwriting")
+    except Exception as e:
+        print(f"⚠️  Error copying file: {e}")
